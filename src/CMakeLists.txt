@@ -81,8 +81,8 @@ endif()
 
 # Create executable
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ../bin)
-add_executable(ctint ${LL_SRC} ${ALGLIB_SRC} mc.cpp)
-target_link_libraries(ctint ${MPI_LIBRARIES})
+add_executable(sse-tV ${LL_SRC} ${ALGLIB_SRC} mc.cpp)
+target_link_libraries(sse-tV ${MPI_LIBRARIES})
 if (PROFILER)
-	target_link_libraries(ctint ${PROFILER})
+	target_link_libraries(sse-tV ${PROFILER})
 endif()

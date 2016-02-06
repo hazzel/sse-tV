@@ -9,50 +9,18 @@
 #include "parameters.h"
 #include "Random.h"
 
-// Argument type
-struct arg_t
-{
-	std::pair<int, int> bond;
-	bool unity;
-
-	void serialize(odump& out)
-	{
-		out.write(bond.first);
-		out.write(bond.second);
-		out.write(unity);
-	}
-
-	void serialize(idump& in)
-	{
-		int s; in.read(s); bond.first = s;
-		in.read(s); bond.second = s;
-		bool u; in.read(u); unity = u;
-	}
-};
-
-struct vertex_matrix
-{
-	const parameters& param;
-
-	double operator()(const arg_t& x, const arg_t& y) const
-	{
-		return param.lambda; 
-	}
-};
-
 // The Monte Carlo configuration
 struct configuration
 {
 	const lattice& l;
-	fast_update<vertex_matrix, arg_t> M;
+	fast_update M;
 	const parameters& param;
 	measurements& measure;
 	std::vector<int> shellsize;
 
 	configuration(const lattice& l_, const greens_function& g0, 
 		const parameters& param_, measurements& measure_)
-		: l(l_), M{vertex_matrix{param_}, l_, param_}, param(param_),
-			measure(measure_)
+		: l(l_), M{l_, param_}, param(param_), measure(measure_)
 	{
 		shellsize.resize(l.max_distance() + 1, 0);
 		for (int d = 0; d <= l.max_distance(); ++d)

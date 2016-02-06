@@ -8,18 +8,6 @@
 #include "configuration.h"
 #include "Random.h"
 
-// k! / (k+n)!
-template<typename T>
-double factorial_ratio(T k, T n)
-{
-	if (k <= T(0) || n <= T(0))
-		return 1.0;
-	double result = 1.0;
-	for (int i = 1; i <= n; ++i)
-		result /= static_cast<double>(k + i);
-	return result;
-}
-
 // ------------ QMC move : inserting a vertex ------------------
 
 template<int N>
@@ -30,12 +18,13 @@ struct move_insert
 
 	double attempt()
 	{
-		return 1.0;
+		return config->M.try_insert_bond();
 	}
 
 	double accept()
 	{
 		config->measure.add("insertion n="+std::to_string(N), 1.0);
+		config->M.finish_insert_bond();
 		return 1.0;
 	}
 
@@ -55,12 +44,13 @@ struct move_remove
 
 	double attempt()
 	{
-		return 1.0;
+		return config->M.try_remove_bond();
 	}
 
 	double accept()
 	{
 		config->measure.add("removal n="+std::to_string(N), 1.0);
+		config->M.finish_remove_bond();
 		return 1.0;
 	}
 
