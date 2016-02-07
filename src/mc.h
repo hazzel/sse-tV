@@ -61,6 +61,7 @@ class mc
 		mctools qmc;
 		parser pars;
 		int sweep;
+		int measure_cnt;
 		int n_cycles;
 		int n_warmup;
 		int n_prebin;
@@ -69,8 +70,6 @@ class mc
 		int n_matsubara;
 
 		honeycomb hc;
-		lattice lat;
 		greens_function g0;
-		parameters param;
-		configuration* config;
+		configuration config;
 };

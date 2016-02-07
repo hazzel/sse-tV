@@ -27,7 +27,8 @@ class lattice
 		typedef std::map<std::string, nested_vector_t> neighbor_map_t;
 
 		lattice()
-			: graph(0) {}
+			: graph(0)
+		{}
 		~lattice() { delete graph; }
 
 		template<typename T>

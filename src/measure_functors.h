@@ -7,7 +7,7 @@
 
 struct measure_estimator
 {
-	configuration* config;
+	configuration& config;
 	measurements& measure;
 	parser& pars;
 	std::vector<double> matsubara_G;

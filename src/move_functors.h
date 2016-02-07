@@ -8,54 +8,28 @@
 #include "configuration.h"
 #include "Random.h"
 
-// ------------ QMC move : inserting a vertex ------------------
+// ------------ QMC move : update a vertex ------------------
 
-template<int N>
-struct move_insert
+struct move_update_vertex
 {
-	configuration* config;
+	configuration& config;
 	Random& rng;
+	int bond_type;
 
 	double attempt()
 	{
-		return config->M.try_insert_bond();
+		return config.M.try_update_vertex(bond_type);
 	}
 
 	double accept()
 	{
-		config->measure.add("insertion n="+std::to_string(N), 1.0);
-		config->M.finish_insert_bond();
+		config.measure.add("update type "+std::to_string(bond_type), 1.0);
+		config.M.finish_update_vertex(bond_type);
 		return 1.0;
 	}
 
 	void reject()
 	{
-		config->measure.add("insertion n="+std::to_string(N), 0.0);
-	}
-};
-
-// ------------ QMC move : deleting a vertex ------------------
-
-template<int N>
-struct move_remove
-{
-	configuration* config;
-	Random& rng;
-
-	double attempt()
-	{
-		return config->M.try_remove_bond();
-	}
-
-	double accept()
-	{
-		config->measure.add("removal n="+std::to_string(N), 1.0);
-		config->M.finish_remove_bond();
-		return 1.0;
-	}
-
-	void reject()
-	{
-		config->measure.add("removal n="+std::to_string(N), 0.0);
+		config.measure.add("update type "+std::to_string(bond_type), 0.0);
 	}
 };

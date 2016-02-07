@@ -6,58 +6,60 @@
 #include "event_functors.h"
 
 mc::mc(const std::string& dir)
-	: rng(Random()), qmc(rng)
+	: rng(Random()), qmc(rng), g0{}, config(rng, g0)
 {
 	//Read parameters
 	pars.read_file(dir);
 	sweep = 0;
+	measure_cnt = 0;
 	n_cycles = pars.value_or_default<int>("cycles", 300);
 	n_warmup = pars.value_or_default<int>("warmup", 100000);
 	n_prebin = pars.value_or_default<int>("prebin", 500);
 	n_rebuild = pars.value_or_default<int>("rebuild", 1000);
 	n_matsubara = pars.value_or_default<int>("matsubara_freqs", 10);
 	hc.L = pars.value_or_default<int>("L", 9);
-	param.beta = 1./pars.value_or_default<double>("T", 0.2);
-	param.t = pars.value_or_default<double>("t", 1.0);
-	param.V = pars.value_or_default<double>("V", 1.355);
-	param.lambda = std::log((2.*param.t + param.V)/(2.*param.t - param.V));
+	config.param.beta = 1./pars.value_or_default<double>("T", 0.2);
+	config.param.t = pars.value_or_default<double>("t", 1.0);
+	config.param.V = pars.value_or_default<double>("V", 1.355);
+	config.param.lambda = std::log((2.*config.param.t + config.param.V)
+		/ (2.*config.param.t - config.param.V));
 
 	//Proposal probabilites
-	param.add = pars.value_or_default<double>("insert", 1.0);
-	param.rem = pars.value_or_default<double>("remove", 1.0);
+	config.param.V1 = pars.value_or_default<double>("V1", 1.0);
+	config.param.V2 = pars.value_or_default<double>("V2", 0.0);
 
 	//Initialize lattice
-	lat.generate_graph(hc);
-	lat.generate_neighbor_map("nearest neighbors", [this]
+	config.l.generate_graph(hc);
+	config.l.generate_neighbor_map("nearest neighbors", [this]
 		(lattice::vertex_t i, lattice::vertex_t j) {
-		return lat.distance(i, j) == 1; });
+		return config.l.distance(i, j) == 1; });
 
-	//Create configuration
-	config = new configuration(lat, g0, param, measure);
+	//Initialize configuration class
+	config.initialize();
 
 	//Set up Monte Carlo moves
-	qmc.add_move(move_insert<1>{config, rng}, "insertion", param.add);
-	qmc.add_move(move_remove<1>{config, rng}, "removal", param.rem);
+	qmc.add_move(move_update_vertex{config, rng, 1}, "update type 1",
+		config.param.V1);
+	qmc.add_move(move_update_vertex{config, rng, 2}, "update type 2",
+		config.param.V2);
 
 	//Set up measurements
 
 	//Measure acceptance probabilities
-	measure.add_observable("sign", n_prebin * n_cycles);
+	config.measure.add_observable("sign", n_prebin * n_cycles);
 	
-	qmc.add_measure(measure_estimator{config, measure, pars,
-		std::vector<double>(lat.max_distance() + 1, 0.0)}, "measurement");
+	qmc.add_measure(measure_estimator{config, config.measure, pars,
+		std::vector<double>(config.l.max_distance() + 1, 0.0)}, "measurement");
 	
 	//Set up events
-	qmc.add_event(event_rebuild{config, measure}, "rebuild");
+	qmc.add_event(event_rebuild{config, config.measure}, "rebuild");
 	qmc.add_event(event_build{config, rng}, "initial build");
 	//Initialize vertex list to reduce warm up time
 	qmc.trigger_event("initial build");
 }
 
 mc::~mc()
-{
-	delete config;
-}
+{}
 
 void mc::random_write(odump& d)
 {
@@ -82,7 +84,7 @@ void mc::write(const std::string& dir)
 	odump d(dir+"dump");
 	random_write(d);
 	d.write(sweep);
-	config->serialize(d);
+	config.serialize(d);
 	d.close();
 	seed_write(dir+"seed");
 	std::ofstream f(dir+"bins");
@@ -113,7 +115,7 @@ bool mc::read(const std::string& dir)
 	{
 		random_read(d);
 		d.read(sweep);
-		config->serialize(d);
+		config.serialize(d);
 		d.close();
 		return true;
 	}
@@ -140,11 +142,20 @@ bool mc::is_thermalized()
 
 void mc::do_update()
 {
-	if (!is_thermalized())
-		qmc.do_update(measure);
-	else
-		for (int i = 0; i < n_cycles; ++i)
-			qmc.do_update(measure);
+	for (int n = 0; n < 2*config.M.max_order(); ++n)
+	{
+		qmc.do_update(config.measure);
+		++measure_cnt;
+		if (is_thermalized() && n_cycles == measure_cnt)
+		{
+			qmc.do_measurement();
+			measure_cnt = 0;
+		}
+		if (n < config.M.max_order())
+			config.M.advance_forward();
+		else
+			config.M.advance_backward();
+	}
 	++sweep;
 	if (sweep % n_rebuild == 0)
 		qmc.trigger_event("rebuild");
@@ -163,6 +174,6 @@ void mc::status()
 //	if (is_thermalized() && sweep % (10000) == 0)
 //	{
 //		std::cout << "sweep: " << sweep << std::endl;
-//		std::cout << "pert order: " << config->perturbation_order() << std::endl;
+//		std::cout << "pert order: " << config.perturbation_order() << std::endl;
 //	}
 }

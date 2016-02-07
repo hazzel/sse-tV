@@ -12,15 +12,17 @@
 // The Monte Carlo configuration
 struct configuration
 {
-	const lattice& l;
+	lattice l;
+	parameters param;
 	fast_update M;
-	const parameters& param;
-	measurements& measure;
+	measurements measure;
 	std::vector<int> shellsize;
 
-	configuration(const lattice& l_, const greens_function& g0, 
-		const parameters& param_, measurements& measure_)
-		: l(l_), M{l_, param_}, param(param_), measure(measure_)
+	configuration(Random& rng, const greens_function& g0)
+		: l{}, param{}, M{rng, l, param}
+	{}
+
+	void initialize()
 	{
 		shellsize.resize(l.max_distance() + 1, 0);
 		for (int d = 0; d <= l.max_distance(); ++d)
@@ -30,9 +32,8 @@ struct configuration
 				if (l.distance(site, j) == d)
 					shellsize[d] += 1;
 		}
+		M.initialize();
 	}
-
-	int perturbation_order() const { return M.perturbation_order(); }
 
 	void serialize(odump& out)
 	{

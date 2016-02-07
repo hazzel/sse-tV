@@ -4,18 +4,18 @@
 
 struct event_rebuild
 {
-	configuration* config;
+	configuration& config;
 	measurements& measure;
 
 	void trigger()
 	{
-		config->M.rebuild();
+		config.M.rebuild();
 	}
 };
 
 struct event_build
 {
-	configuration* config;
+	configuration& config;
 	Random& rng;
 
 	void trigger()
