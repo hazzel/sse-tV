@@ -14,6 +14,8 @@ struct measure_estimator
 
 	void perform()
 	{
+		measure.add("M2", config.M.measure_M2());
+		measure.add("<n1>", config.M.non_ident());
 	}
 
 	void collect(std::ostream& os)

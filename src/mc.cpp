@@ -44,6 +44,8 @@ mc::mc(const std::string& dir)
 		config.param.V2);
 
 	//Set up measurements
+	config.measure.add_observable("M2", n_prebin);
+	config.measure.add_observable("<n1>", n_prebin);
 
 	//Measure acceptance probabilities
 	config.measure.add_observable("sign", n_prebin * n_cycles);
@@ -151,6 +153,7 @@ void mc::do_update()
 			qmc.do_measurement();
 			measure_cnt = 0;
 		}
+		//config.M.print_gf_from_scratch();
 		if (n < config.M.max_order())
 			config.M.advance_forward();
 		else

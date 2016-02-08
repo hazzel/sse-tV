@@ -30,17 +30,14 @@ class fast_update
 			current_vertex = 0;
 			bond_list.resize(n_max_order, 0);
 			greens_function = 0.5 * dmatrix_t::Identity(l.n_sites(), l.n_sites());
-			A.resize(2, 2);
-			A << -1., std::exp(param.lambda), std::exp(param.lambda), -1.;
-			invA = A.inverse();
-			B.resize(2, 2);
-			B << -1., std::exp(-param.lambda), std::exp(-param.lambda), -1.;
-			invB = B.inverse();
-			C.resize(2, 2);
-			C << 0., std::exp(param.lambda), std::exp(param.lambda), 0.;
-			invC = C.inverse();
 			id_2 = matrix_t<2, 2>::Identity();
 			id_N = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			A = vertex_block(param.lambda);
+			invA = A.inverse();
+			B = vertex_block(param.lambda) - id_2;
+			invB = B.inverse();
+			C = vertex_block(-param.lambda) - id_2;
+			invC = C.inverse();
 		}
 
 		int max_order() const
@@ -69,6 +66,62 @@ class fast_update
 		void serialize(idump& in)
 		{
 		}
+
+		dmatrix_t vertex_matrix(double lambda, int vertex_id)
+		{
+			dmatrix_t lam = dmatrix_t::Zero(l.n_sites(), l.n_sites());
+			int bond_id = bond_list[vertex_id] - 1;
+			std::pair<int, int> bond = lattice_bonds[bond_id];
+			if (bond_id < 0)
+				return dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			lam(bond.first, bond.second) = lambda;
+			lam(bond.second, bond.first) = lambda;
+			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(lam);
+			dmatrix_t d = solver.eigenvalues().unaryExpr([](double e)
+				{ return std::exp(e); }).asDiagonal();
+			return solver.eigenvectors() * d * solver.eigenvectors().adjoint();
+		}
+
+		matrix_t<2, 2> vertex_block(double lambda)
+		{
+			dmatrix_t lam = dmatrix_t::Zero(l.n_sites(), l.n_sites());
+			std::pair<int, int> bond = lattice_bonds[0];
+			lam(bond.first, bond.second) = lambda;
+			lam(bond.second, bond.first) = lambda;
+			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(lam);
+			dmatrix_t d = solver.eigenvalues().unaryExpr([](double e)
+				{ return std::exp(e); }).asDiagonal();
+			lam = solver.eigenvectors() * d * solver.eigenvectors().adjoint();
+			matrix_t<2, 2> block(2, 2);
+			block << lam(bond.first, bond.first),
+				lam(bond.first, bond.second),
+				lam(bond.second, bond.first),
+				lam(bond.second, bond.second);
+			return block;
+		}
+
+		void print_gf_from_scratch()
+		{
+			dmatrix_t R = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			for (int n = 0; n <= current_vertex; ++n)
+			{
+				if (bond_list[n] == 0) continue;
+				R *= vertex_matrix(param.lambda, n);
+			}
+			dmatrix_t L = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			for (int n = current_vertex+1; n < max_order(); ++n)
+			{
+				if (bond_list[n] == 0) continue;
+				L *= vertex_matrix(param.lambda, n);
+			}
+
+			dmatrix_t G = (id_N + R * L).inverse();
+			std::cout << "G from scratch" << std::endl;
+			print_matrix(G);
+			std::cout << "G from update" << std::endl;
+			print_matrix(greens_function);
+			std::cout << "=================" << std::endl;
+		}
 		
 		double try_update_vertex(int bond_type)
 		{
@@ -78,15 +131,16 @@ class fast_update
 				matrix_t<2, 2> g = id_2;
 				int bond_id = rng() * l.n_bonds();
 				bond_buffer = bond_id + 1;
-				g(0, 0) -= greens_function(lattice_bonds[bond_id].first,
-					lattice_bonds[bond_id].first);
-				g(0, 1) -= greens_function(lattice_bonds[bond_id].first,
-					lattice_bonds[bond_id].second);
-				g(1, 0) -= greens_function(lattice_bonds[bond_id].second,
-					lattice_bonds[bond_id].first);
-				g(1, 1) -= greens_function(lattice_bonds[bond_id].second,
-					lattice_bonds[bond_id].second);
-				matrix_t<2, 2> d = id_2 + A * g;
+				std::pair<int, int> bond = lattice_bonds[bond_id];
+				g(0, 0) -= greens_function(bond.first,
+					bond.first);
+				g(0, 1) -= greens_function(bond.first,
+					bond.second);
+				g(1, 0) -= greens_function(bond.second,
+					bond.first);
+				g(1, 1) -= greens_function(bond.second,
+					bond.second);
+				matrix_t<2, 2> d = id_2 + B * g;
 				return d.determinant() * l.n_bonds() * param.beta * param.t
 					/ ((n_max_order - n_non_ident) * std::sinh(param.lambda));
 			}
@@ -94,17 +148,18 @@ class fast_update
 			else
 			{
 				matrix_t<2, 2> g = id_2;
-				int bond_id = bond_list[current_vertex]-1;
+				int bond_id = bond_list[current_vertex] - 1;
 				bond_buffer = 0;
-				g(0, 0) -= greens_function(lattice_bonds[bond_id].first,
-					lattice_bonds[bond_id].first);
-				g(0, 1) -= greens_function(lattice_bonds[bond_id].first,
-					lattice_bonds[bond_id].second);
-				g(1, 0) -= greens_function(lattice_bonds[bond_id].second,
-					lattice_bonds[bond_id].first);
-				g(1, 1) -= greens_function(lattice_bonds[bond_id].second,
-					lattice_bonds[bond_id].second);
-				matrix_t<2, 2> d = id_2 + B * g;
+				std::pair<int, int> bond = lattice_bonds[bond_id];
+				g(0, 0) -= greens_function(bond.first,
+					bond.first);
+				g(0, 1) -= greens_function(bond.first,
+					bond.second);
+				g(1, 0) -= greens_function(bond.second,
+					bond.first);
+				g(1, 1) -= greens_function(bond.second,
+					bond.second);
+				matrix_t<2, 2> d = id_2 + C * g;
 				return d.determinant() * ((n_max_order - n_non_ident + 1.) 
 					* std::sinh(param.lambda)) / (l.n_bonds() * param.beta * param.t);
 			}
@@ -117,24 +172,25 @@ class fast_update
 			{
 				int bond_id = bond_buffer - 1;
 				bond_list[current_vertex] = bond_buffer;
+				std::pair<int, int> bond = lattice_bonds[bond_id];
 				matrix_t<2, 2> g = id_2;
-				g(0, 0) -= greens_function(lattice_bonds[bond_id].first,
-					lattice_bonds[bond_id].first);
-				g(0, 1) -= greens_function(lattice_bonds[bond_id].first,
-					lattice_bonds[bond_id].second);
-				g(1, 0) -= greens_function(lattice_bonds[bond_id].second,
-					lattice_bonds[bond_id].first);
-				g(1, 1) -= greens_function(lattice_bonds[bond_id].second,
-					lattice_bonds[bond_id].second);
-				matrix_t<2, 2> d = (invA + g).inverse();
+				g(0, 0) -= greens_function(bond.first,
+					bond.first);
+				g(0, 1) -= greens_function(bond.first,
+					bond.second);
+				g(1, 0) -= greens_function(bond.second,
+					bond.first);
+				g(1, 1) -= greens_function(bond.second,
+					bond.second);
+				matrix_t<2, 2> d = (invB + g).inverse();
 				dmatrix_t e = dmatrix_t::Zero(l.n_sites(), l.n_sites());
-				e(lattice_bonds[bond_id].first, lattice_bonds[bond_id].first)
+				e(bond.first, bond.first)
 					= d(0, 0);
-				e(lattice_bonds[bond_id].first, lattice_bonds[bond_id].second)
+				e(bond.first, bond.second)
 					= d(0, 1);
-				e(lattice_bonds[bond_id].second, lattice_bonds[bond_id].first)
+				e(bond.second, bond.first)
 					= d(1, 0);
-				e(lattice_bonds[bond_id].second, lattice_bonds[bond_id].second)
+				e(bond.second, bond.second)
 					= d(1, 1);
 				greens_function -= (greens_function * e * (id_N - greens_function))
 					.eval();
@@ -145,60 +201,52 @@ class fast_update
 			{
 				int bond_id = bond_list[current_vertex] - 1;
 				bond_list[current_vertex] = 0;
+				std::pair<int, int> bond = lattice_bonds[bond_id];
 				matrix_t<2, 2> g = id_2;
-				g(0, 0) -= greens_function(lattice_bonds[bond_id].first,
-					lattice_bonds[bond_id].first);
-				g(0, 1) -= greens_function(lattice_bonds[bond_id].first,
-					lattice_bonds[bond_id].second);
-				g(1, 0) -= greens_function(lattice_bonds[bond_id].second,
-					lattice_bonds[bond_id].first);
-				g(1, 1) -= greens_function(lattice_bonds[bond_id].second,
-					lattice_bonds[bond_id].second);
-				matrix_t<2, 2> d = (invB + g).inverse();
+				g(0, 0) -= greens_function(bond.first,
+					bond.first);
+				g(0, 1) -= greens_function(bond.first,
+					bond.second);
+				g(1, 0) -= greens_function(bond.second,
+					bond.first);
+				g(1, 1) -= greens_function(bond.second,
+					bond.second);
+				matrix_t<2, 2> d = (invC + g).inverse();
 				dmatrix_t e = dmatrix_t::Zero(l.n_sites(), l.n_sites());
-				e(lattice_bonds[bond_id].first, lattice_bonds[bond_id].first)
+				e(bond.first, bond.first)
 					= d(0, 0);
-				e(lattice_bonds[bond_id].first, lattice_bonds[bond_id].second)
+				e(bond.first, bond.second)
 					= d(0, 1);
-				e(lattice_bonds[bond_id].second, lattice_bonds[bond_id].first)
+				e(bond.second, bond.first)
 					= d(1, 0);
-				e(lattice_bonds[bond_id].second, lattice_bonds[bond_id].second)
+				e(bond.second, bond.second)
 					= d(1, 1);
 				greens_function -= (greens_function * e * (id_N - greens_function))
 					.eval();
 				--n_non_ident;
 			}
-			print_matrix(greens_function);
-			std::cout << "-----" << std::endl;
 		}
 
 		void advance_forward()
 		{
 			if (current_vertex == n_max_order - 1)
 				return;
-			dmatrix_t e = dmatrix_t::Zero(l.n_sites(), l.n_sites());
-			dmatrix_t f = dmatrix_t::Zero(l.n_sites(), l.n_sites());
-			int bond_id = bond_list[current_vertex+1];
-			if (bond_id > 0)
+			dmatrix_t e = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			dmatrix_t f = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			int bond_id = bond_list[current_vertex+1] - 1;
+			std::pair<int, int> bond = lattice_bonds[bond_id];
+			if (bond_id >= 0)
 			{
-				e(lattice_bonds[bond_id-1].first, lattice_bonds[bond_id-1].first)
-					= C(0, 0);
-				e(lattice_bonds[bond_id-1].first, lattice_bonds[bond_id-1].second)
-					= C(0, 1);
-				e(lattice_bonds[bond_id-1].second, lattice_bonds[bond_id-1].first)
-					= C(1, 0);
-				e(lattice_bonds[bond_id-1].second, lattice_bonds[bond_id-1].second)
-					= C(1, 1);
-				f(lattice_bonds[bond_id-1].first, lattice_bonds[bond_id-1].first)
-					= invC(0, 0);
-				f(lattice_bonds[bond_id-1].first, lattice_bonds[bond_id-1].second)
-					= invC(0, 1);
-				f(lattice_bonds[bond_id-1].second, lattice_bonds[bond_id-1].first)
-					= invC(1, 0);
-				f(lattice_bonds[bond_id-1].second, lattice_bonds[bond_id-1].second)
-					= invC(1, 1);
+				e(bond.first, bond.first) = A(0, 0);
+				e(bond.first, bond.second) = A(0, 1);
+				e(bond.second, bond.first) = A(1, 0);
+				e(bond.second, bond.second) = A(1, 1);
+				f(bond.first, bond.first) = invA(0, 0);
+				f(bond.first, bond.second) = invA(0, 1);
+				f(bond.second, bond.first) = invA(1, 0);
+				f(bond.second, bond.second) = invA(1, 1);
 			}
-			greens_function = e * greens_function * f;
+			greens_function = f * greens_function * e;
 			++current_vertex;
 		}
 		
@@ -206,30 +254,37 @@ class fast_update
 		{
 			if (current_vertex == 0)
 				return;
-			dmatrix_t e = dmatrix_t::Zero(l.n_sites(), l.n_sites());
-			dmatrix_t f = dmatrix_t::Zero(l.n_sites(), l.n_sites());
-			int bond_id = bond_list[current_vertex-1];
-			if (bond_id > 0)
+			dmatrix_t e = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			dmatrix_t f = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			int bond_id = bond_list[current_vertex-1] - 1;
+			std::pair<int, int> bond = lattice_bonds[bond_id];
+			if (bond_id >= 0)
 			{
-				e(lattice_bonds[bond_id-1].first, lattice_bonds[bond_id-1].first)
-					= C(0, 0);
-				e(lattice_bonds[bond_id-1].first, lattice_bonds[bond_id-1].second)
-					= C(0, 1);
-				e(lattice_bonds[bond_id-1].second, lattice_bonds[bond_id-1].first)
-					= C(1, 0);
-				e(lattice_bonds[bond_id-1].second, lattice_bonds[bond_id-1].second)
-					= C(1, 1);
-				f(lattice_bonds[bond_id-1].first, lattice_bonds[bond_id-1].first)
-					= invC(0, 0);
-				f(lattice_bonds[bond_id-1].first, lattice_bonds[bond_id-1].second)
-					= invC(0, 1);
-				f(lattice_bonds[bond_id-1].second, lattice_bonds[bond_id-1].first)
-					= invC(1, 0);
-				f(lattice_bonds[bond_id-1].second, lattice_bonds[bond_id-1].second)
-					= invC(1, 1);
+				e(bond.first, bond.first) = A(0, 0);
+				e(bond.first, bond.second) = A(0, 1);
+				e(bond.second, bond.first) = A(1, 0);
+				e(bond.second, bond.second) = A(1, 1);
+				f(bond.first, bond.first) = invA(0, 0);
+				f(bond.first, bond.second) = invA(0, 1);
+				f(bond.second, bond.first) = invA(1, 0);
+				f(bond.second, bond.second) = invA(1, 1);
 			}
 			greens_function = f * greens_function * e;
 			--current_vertex;
+		}
+
+		double measure_M2()
+		{
+			double M2 = 0.;
+			int i = 0;
+			for (int j = 0; j < l.n_sites(); ++j)
+			{
+				double delta_ij = (i == j ? 1. : 0.);
+				M2 += l.parity(i) * l.parity(j) * ((greens_function(i, i) - 1.)
+					* (greens_function(j, j) - 1.) - greens_function(i, j)
+					* (greens_function(j, i) - delta_ij)) / l.n_sites();
+			}
+			return M2;
 		}
 	private:
 		void print_matrix(const dmatrix_t& m)
@@ -248,12 +303,12 @@ class fast_update
 		int n_max_order;
 		int n_non_ident;
 		dmatrix_t greens_function;
-		dmatrix_t A; //exp(Lambda_b) - I
-		dmatrix_t invA; //(exp(Lambda_b) - I)^-1
+		dmatrix_t A; //exp(Lambda_b)
+		dmatrix_t invA; //exp(-Lambda_b)
 		dmatrix_t B; //exp(Lambda_b) - I
-		dmatrix_t invB; //(exp(-Lambda_b) - I)^-1
-		dmatrix_t C; //exp(Lambda_b)
-		dmatrix_t invC; //exp(-Lambda_b)
+		dmatrix_t invB; //(exp(Lambda_b) - I)^-1
+		dmatrix_t C; //exp(Lambda_b) - I
+		dmatrix_t invC; //(exp(-Lambda_b) - I)^-1
 		dmatrix_t id_2;
 		dmatrix_t id_N;
 };
