@@ -25,7 +25,7 @@ class fast_update
 				for (auto j : l.neighbors(i, "nearest neighbors"))
 					if (i < j)
 						lattice_bonds.push_back({i, j});
-			n_max_order = 1000;
+			n_max_order = 10;
 			n_non_ident = 0;
 			current_vertex = 0;
 			bond_list.resize(n_max_order, 0);
@@ -102,6 +102,7 @@ class fast_update
 
 		void print_gf_from_scratch()
 		{
+			std::cout << "current vertex: " << current_vertex << std::endl;
 			dmatrix_t R = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 			for (int n = 0; n <= current_vertex; ++n)
 			{
@@ -132,14 +133,10 @@ class fast_update
 				int bond_id = rng() * l.n_bonds();
 				bond_buffer = bond_id + 1;
 				std::pair<int, int> bond = lattice_bonds[bond_id];
-				g(0, 0) -= greens_function(bond.first,
-					bond.first);
-				g(0, 1) -= greens_function(bond.first,
-					bond.second);
-				g(1, 0) -= greens_function(bond.second,
-					bond.first);
-				g(1, 1) -= greens_function(bond.second,
-					bond.second);
+				g(0, 0) -= greens_function(bond.first, bond.first);
+				g(0, 1) -= greens_function(bond.first, bond.second);
+				g(1, 0) -= greens_function(bond.second, bond.first);
+				g(1, 1) -= greens_function(bond.second, bond.second);
 				matrix_t<2, 2> d = id_2 + B * g;
 				return d.determinant() * l.n_bonds() * param.beta * param.t
 					/ ((n_max_order - n_non_ident) * std::sinh(param.lambda));
@@ -151,14 +148,10 @@ class fast_update
 				int bond_id = bond_list[current_vertex] - 1;
 				bond_buffer = 0;
 				std::pair<int, int> bond = lattice_bonds[bond_id];
-				g(0, 0) -= greens_function(bond.first,
-					bond.first);
-				g(0, 1) -= greens_function(bond.first,
-					bond.second);
-				g(1, 0) -= greens_function(bond.second,
-					bond.first);
-				g(1, 1) -= greens_function(bond.second,
-					bond.second);
+				g(0, 0) -= greens_function(bond.first, bond.first);
+				g(0, 1) -= greens_function(bond.first, bond.second);
+				g(1, 0) -= greens_function(bond.second, bond.first);
+				g(1, 1) -= greens_function(bond.second, bond.second);
 				matrix_t<2, 2> d = id_2 + C * g;
 				return d.determinant() * ((n_max_order - n_non_ident + 1.) 
 					* std::sinh(param.lambda)) / (l.n_bonds() * param.beta * param.t);
@@ -174,24 +167,16 @@ class fast_update
 				bond_list[current_vertex] = bond_buffer;
 				std::pair<int, int> bond = lattice_bonds[bond_id];
 				matrix_t<2, 2> g = id_2;
-				g(0, 0) -= greens_function(bond.first,
-					bond.first);
-				g(0, 1) -= greens_function(bond.first,
-					bond.second);
-				g(1, 0) -= greens_function(bond.second,
-					bond.first);
-				g(1, 1) -= greens_function(bond.second,
-					bond.second);
+				g(0, 0) -= greens_function(bond.first, bond.first);
+				g(0, 1) -= greens_function(bond.first, bond.second);
+				g(1, 0) -= greens_function(bond.second, bond.first);
+				g(1, 1) -= greens_function(bond.second, bond.second);
 				matrix_t<2, 2> d = (invB + g).inverse();
 				dmatrix_t e = dmatrix_t::Zero(l.n_sites(), l.n_sites());
-				e(bond.first, bond.first)
-					= d(0, 0);
-				e(bond.first, bond.second)
-					= d(0, 1);
-				e(bond.second, bond.first)
-					= d(1, 0);
-				e(bond.second, bond.second)
-					= d(1, 1);
+				e(bond.first, bond.first) = d(0, 0);
+				e(bond.first, bond.second) = d(0, 1);
+				e(bond.second, bond.first) = d(1, 0);
+				e(bond.second, bond.second) = d(1, 1);
 				greens_function -= (greens_function * e * (id_N - greens_function))
 					.eval();
 				++n_non_ident;
@@ -203,24 +188,16 @@ class fast_update
 				bond_list[current_vertex] = 0;
 				std::pair<int, int> bond = lattice_bonds[bond_id];
 				matrix_t<2, 2> g = id_2;
-				g(0, 0) -= greens_function(bond.first,
-					bond.first);
-				g(0, 1) -= greens_function(bond.first,
-					bond.second);
-				g(1, 0) -= greens_function(bond.second,
-					bond.first);
-				g(1, 1) -= greens_function(bond.second,
-					bond.second);
+				g(0, 0) -= greens_function(bond.first, bond.first);
+				g(0, 1) -= greens_function(bond.first, bond.second);
+				g(1, 0) -= greens_function(bond.second, bond.first);
+				g(1, 1) -= greens_function(bond.second, bond.second);
 				matrix_t<2, 2> d = (invC + g).inverse();
 				dmatrix_t e = dmatrix_t::Zero(l.n_sites(), l.n_sites());
-				e(bond.first, bond.first)
-					= d(0, 0);
-				e(bond.first, bond.second)
-					= d(0, 1);
-				e(bond.second, bond.first)
-					= d(1, 0);
-				e(bond.second, bond.second)
-					= d(1, 1);
+				e(bond.first, bond.first) = d(0, 0);
+				e(bond.first, bond.second) = d(0, 1);
+				e(bond.second, bond.first) = d(1, 0);
+				e(bond.second, bond.second) = d(1, 1);
 				greens_function -= (greens_function * e * (id_N - greens_function))
 					.eval();
 				--n_non_ident;
@@ -246,7 +223,17 @@ class fast_update
 				f(bond.second, bond.first) = invA(1, 0);
 				f(bond.second, bond.second) = invA(1, 1);
 			}
-			greens_function = f * greens_function * e;
+			std::cout << "#########################" << std::endl;
+			std::cout << "e" << std::endl;
+			print_matrix(e);
+			std::cout << "f" << std::endl;
+			print_matrix(f);
+			std::cout << "before prop" << std::endl;
+			print_matrix(greens_function);
+			std::cout << "after prop" << std::endl;
+			print_matrix(greens_function);
+			std::cout << "#########################" << std::endl;
+			greens_function = e * greens_function * f;
 			++current_vertex;
 		}
 		
@@ -284,7 +271,7 @@ class fast_update
 					* (greens_function(j, j) - 1.) - greens_function(i, j)
 					* (greens_function(j, i) - delta_ij)) / l.n_sites();
 			}
-			return M2;
+			return M2 - 0.25;
 		}
 	private:
 		void print_matrix(const dmatrix_t& m)
