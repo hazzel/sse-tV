@@ -147,6 +147,7 @@ void mc::do_update()
 	for (int n = 0; n < 2*config.M.max_order(); ++n)
 	{
 		qmc.do_update(config.measure);
+		config.M.print_gf_from_scratch();
 		if (is_thermalized())
 			++measure_cnt;
 		if (is_thermalized() && n_cycles == measure_cnt)
@@ -154,7 +155,6 @@ void mc::do_update()
 			qmc.do_measurement();
 			measure_cnt = 0;
 		}
-		config.M.print_gf_from_scratch();
 		if (n < config.M.max_order())
 		{
 			config.M.advance_forward();
@@ -165,6 +165,8 @@ void mc::do_update()
 			config.M.advance_backward();
 			std::cout << "moved backward" << std::endl;
 		}
+		config.M.print_gf_from_scratch();
+		std::cout << "//////////////" << std::endl;
 	}
 	++sweep;
 	if (sweep % n_rebuild == 0)

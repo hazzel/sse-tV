@@ -32,12 +32,36 @@ class fast_update
 			greens_function = 0.5 * dmatrix_t::Identity(l.n_sites(), l.n_sites());
 			id_2 = matrix_t<2, 2>::Identity();
 			id_N = dmatrix_t::Identity(l.n_sites(), l.n_sites());
-			A = vertex_block(param.lambda);
-			invA = A.inverse();
-			B = vertex_block(param.lambda) - id_2;
+			dmatrix_t V = vertex_matrix(param.lambda);
+			dmatrix_t invV = vertex_matrix(-param.lambda);
+			A = vertex_block(V);
+			invA = vertex_block(invV);
+			B = A - id_2;
+			//invB = vertex_block((V - id_N).inverse());
 			invB = B.inverse();
-			C = vertex_block(-param.lambda) - id_2;
+			std::cout << "B" << std::endl;
+			print_matrix(B);
+			std::cout << "invB" << std::endl;
+			print_matrix(invB);
+			C = invA - id_2;
+			//invC = vertex_block((invV - id_N).inverse());
 			invC = C.inverse();
+			std::cout << "C" << std::endl;
+			print_matrix(C);
+			std::cout << "invC" << std::endl;
+			print_matrix(invC);
+			
+			dmatrix_t lam(l.n_sites(), l.n_sites());
+			auto bond = lattice_bonds[0];
+			lam(bond.first, bond.second) = param.lambda;
+			lam(bond.second, bond.first) = param.lambda;
+			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(lam);
+			dmatrix_t d = solver.eigenvalues().unaryExpr([](double e)
+				{ return std::exp(e); }).asDiagonal();
+			lam = solver.eigenvectors() * d * solver.eigenvectors().adjoint()-id_N;
+			lam = lam.inverse().eval();
+			std::cout << "(exp(lambda) - 1)^-1" << std::endl;
+			print_matrix(lam);
 		}
 
 		int max_order() const
@@ -82,7 +106,7 @@ class fast_update
 			return solver.eigenvectors() * d * solver.eigenvectors().adjoint();
 		}
 
-		matrix_t<2, 2> vertex_block(double lambda)
+		dmatrix_t vertex_matrix(double lambda)
 		{
 			dmatrix_t lam = dmatrix_t::Zero(l.n_sites(), l.n_sites());
 			std::pair<int, int> bond = lattice_bonds[0];
@@ -91,18 +115,24 @@ class fast_update
 			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(lam);
 			dmatrix_t d = solver.eigenvalues().unaryExpr([](double e)
 				{ return std::exp(e); }).asDiagonal();
-			lam = solver.eigenvectors() * d * solver.eigenvectors().adjoint();
+			return solver.eigenvectors() * d * solver.eigenvectors().adjoint();
+		}
+
+		matrix_t<2, 2> vertex_block(const dmatrix_t& m)
+		{
+			std::pair<int, int> bond = lattice_bonds[0];
 			matrix_t<2, 2> block(2, 2);
-			block << lam(bond.first, bond.first),
-				lam(bond.first, bond.second),
-				lam(bond.second, bond.first),
-				lam(bond.second, bond.second);
+			block << m(bond.first, bond.first),
+				m(bond.first, bond.second),
+				m(bond.second, bond.first),
+				m(bond.second, bond.second);
 			return block;
 		}
 
 		void print_gf_from_scratch()
 		{
-			std::cout << "current vertex: " << current_vertex << std::endl;
+			std::cout << "current vertex: " << current_vertex
+				<< ", non_ident: " << n_non_ident << std::endl;
 			dmatrix_t R = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 			for (int n = 0; n <= current_vertex; ++n)
 			{
@@ -117,10 +147,11 @@ class fast_update
 			}
 
 			dmatrix_t G = (id_N + R * L).inverse();
-			std::cout << "G from scratch" << std::endl;
-			print_matrix(G);
-			std::cout << "G from update" << std::endl;
-			print_matrix(greens_function);
+			std::cout << "|G-Gp| = " << (G-greens_function).norm() << std::endl;
+			//std::cout << "G from scratch" << std::endl;
+			//print_matrix(G);
+			//std::cout << "G from update" << std::endl;
+			//print_matrix(greens_function);
 			std::cout << "=================" << std::endl;
 		}
 		
@@ -177,8 +208,7 @@ class fast_update
 				e(bond.first, bond.second) = d(0, 1);
 				e(bond.second, bond.first) = d(1, 0);
 				e(bond.second, bond.second) = d(1, 1);
-				greens_function -= (greens_function * e * (id_N - greens_function))
-					.eval();
+				greens_function = greens_function - (greens_function * e * (id_N - greens_function));
 				++n_non_ident;
 			}
 			// Remove bond at vertex
@@ -198,8 +228,9 @@ class fast_update
 				e(bond.first, bond.second) = d(0, 1);
 				e(bond.second, bond.first) = d(1, 0);
 				e(bond.second, bond.second) = d(1, 1);
-				greens_function -= (greens_function * e * (id_N - greens_function))
-					.eval();
+				std::cout << "finish: matrix e" << std::endl;
+				print_matrix(e);
+				greens_function = greens_function - (greens_function * e * (id_N - greens_function));
 				--n_non_ident;
 			}
 		}
@@ -223,16 +254,6 @@ class fast_update
 				f(bond.second, bond.first) = invA(1, 0);
 				f(bond.second, bond.second) = invA(1, 1);
 			}
-			std::cout << "#########################" << std::endl;
-			std::cout << "e" << std::endl;
-			print_matrix(e);
-			std::cout << "f" << std::endl;
-			print_matrix(f);
-			std::cout << "before prop" << std::endl;
-			print_matrix(greens_function);
-			std::cout << "after prop" << std::endl;
-			print_matrix(greens_function);
-			std::cout << "#########################" << std::endl;
 			greens_function = e * greens_function * f;
 			++current_vertex;
 		}
@@ -277,7 +298,7 @@ class fast_update
 		void print_matrix(const dmatrix_t& m)
 		{
 			Eigen::IOFormat clean(4, 0, ", ", "\n", "[", "]");
-			std::cout << m.format(clean) << std::endl;
+			std::cout << m.format(clean) << std::endl << std::endl;
 		}
 	private:
 		Random& rng;
