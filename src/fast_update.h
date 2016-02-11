@@ -25,7 +25,7 @@ class fast_update
 				for (auto j : l.neighbors(i, "nearest neighbors"))
 					if (i < j)
 						lattice_bonds.push_back({i, j});
-			n_max_order = 10;
+			n_max_order = 500;
 			n_non_ident = 0;
 			current_vertex = 0;
 			bond_list.resize(n_max_order, 0);
@@ -39,29 +39,9 @@ class fast_update
 			B = A - id_2;
 			//invB = vertex_block((V - id_N).inverse());
 			invB = B.inverse();
-			std::cout << "B" << std::endl;
-			print_matrix(B);
-			std::cout << "invB" << std::endl;
-			print_matrix(invB);
 			C = invA - id_2;
 			//invC = vertex_block((invV - id_N).inverse());
 			invC = C.inverse();
-			std::cout << "C" << std::endl;
-			print_matrix(C);
-			std::cout << "invC" << std::endl;
-			print_matrix(invC);
-			
-			dmatrix_t lam(l.n_sites(), l.n_sites());
-			auto bond = lattice_bonds[0];
-			lam(bond.first, bond.second) = param.lambda;
-			lam(bond.second, bond.first) = param.lambda;
-			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(lam);
-			dmatrix_t d = solver.eigenvalues().unaryExpr([](double e)
-				{ return std::exp(e); }).asDiagonal();
-			lam = solver.eigenvectors() * d * solver.eigenvectors().adjoint()-id_N;
-			lam = lam.inverse().eval();
-			std::cout << "(exp(lambda) - 1)^-1" << std::endl;
-			print_matrix(lam);
 		}
 
 		int max_order() const
@@ -132,7 +112,7 @@ class fast_update
 		dmatrix_t get_R()
 		{
 			dmatrix_t R = dmatrix_t::Identity(l.n_sites(), l.n_sites());
-			for (int n = 0; n <= current_vertex; ++n)
+			for (int n = current_vertex; n < n_max_order; ++n)
 			{
 				if (bond_list[n] == 0) continue;
 				R *= vertex_matrix(param.lambda, n);
@@ -143,7 +123,7 @@ class fast_update
 		dmatrix_t get_L()
 		{
 			dmatrix_t L = dmatrix_t::Identity(l.n_sites(), l.n_sites());
-			for (int n = 0; n <= current_vertex; ++n)
+			for (int n = 0; n < current_vertex; ++n)
 			{
 				if (bond_list[n] == 0) continue;
 				L *= vertex_matrix(param.lambda, n);
@@ -155,9 +135,7 @@ class fast_update
 		{
 			std::cout << "current vertex: " << current_vertex
 				<< ", non_ident: " << n_non_ident << std::endl;
-			dmatrix_t R = get_R();
-			dmatrix_t L = get_L();
-			dmatrix_t G = (id_N + R*L).inverse();
+			dmatrix_t G = (id_N + get_R()*get_L()).inverse();
 			std::cout << "|G-Gp| = " << (G-greens_function).norm() << std::endl;
 			std::cout << "differences at" << std::endl;
 			for (int i = 0; i < l.n_sites(); ++i)
@@ -165,6 +143,11 @@ class fast_update
 					if (std::abs(G(i, j) - greens_function(i, j)) > 0.000001)
 						std::cout << i << ", " << j << std::endl;
 			std::cout << std::endl;
+			if ((G-greens_function).norm() > 0.00001)
+			{
+				print_matrix(G);
+				print_matrix(greens_function);
+			}
 			//std::cout << "G from scratch" << std::endl;
 			//print_matrix(G);
 			//std::cout << "G from update" << std::endl;
@@ -234,12 +217,7 @@ class fast_update
 				e(bond.first, bond.second) = d(0, 1);
 				e(bond.second, bond.first) = d(1, 0);
 				e(bond.second, bond.second) = d(1, 1);
-				//greens_function = greens_function - (greens_function * e * (id_N - greens_function));
-				
-				dmatrix_t lam = vertex_matrix(param.lambda, current_vertex) - id_N;
-				dmatrix_t inv = (id_N + (id_N - greens_function) * lam).inverse();
-				greens_function -= (greens_function * lam * inv * (id_N - greens_function)).eval();
-				greens_function = (id_N + get_R() * get_L()).inverse(); 
+				greens_function = greens_function - (greens_function * e * (id_N - greens_function));	
 				++n_non_ident;
 			}
 			// Remove bond at vertex
@@ -259,14 +237,10 @@ class fast_update
 				e(bond.first, bond.second) = d(0, 1);
 				e(bond.second, bond.first) = d(1, 0);
 				e(bond.second, bond.second) = d(1, 1);
-				//greens_function = greens_function - (greens_function * e * (id_N - greens_function));
-				
-				dmatrix_t lam = vertex_matrix(-param.lambda, current_vertex) - id_N;
-				dmatrix_t inv = (id_N + (id_N - greens_function) * lam).inverse();
-				greens_function -= (greens_function * lam * inv * (id_N - greens_function)).eval();
-				greens_function = (id_N + get_R() * get_L()).inverse(); 
+				greens_function = greens_function - (greens_function * e * (id_N - greens_function));
 				--n_non_ident;
 			}
+			//greens_function = (id_N + get_R() * get_L()).inverse(); 
 		}
 
 		void advance_forward()
@@ -288,8 +262,9 @@ class fast_update
 				f(bond.second, bond.first) = invA(1, 0);
 				f(bond.second, bond.second) = invA(1, 1);
 			}
-			greens_function = e * greens_function * f;
+			//greens_function = e * greens_function * f;
 			++current_vertex;
+			greens_function = (id_N + get_R() * get_L()).inverse(); 
 		}
 		
 		void advance_backward()
@@ -313,6 +288,7 @@ class fast_update
 			}
 			greens_function = f * greens_function * e;
 			--current_vertex;
+			greens_function = (id_N + get_R() * get_L()).inverse();
 		}
 
 		double measure_M2()
