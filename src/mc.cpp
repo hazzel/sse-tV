@@ -165,6 +165,7 @@ void mc::do_update()
 			config.M.advance_backward();
 			std::cout << "moved backward" << std::endl;
 		}
+		config.M.print_bonds();
 		config.M.print_gf_from_scratch();
 		std::cout << "//////////////" << std::endl;
 	}
