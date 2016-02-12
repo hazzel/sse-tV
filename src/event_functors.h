@@ -22,3 +22,15 @@ struct event_build
 	{
 	}
 };
+
+struct event_max_order
+{
+	configuration& config;
+	Random& rng;
+
+	void trigger()
+	{
+		if (config.M.non_ident() >= 0.75 * config.M.max_order())
+			config.M.max_order(std::max(10., 4./3. * config.M.max_order()));
+	}
+};

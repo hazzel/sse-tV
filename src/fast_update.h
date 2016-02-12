@@ -25,7 +25,7 @@ class fast_update
 				for (auto j : l.neighbors(i, "nearest neighbors"))
 					if (i < j)
 						lattice_bonds.push_back({i, j});
-			n_max_order = 100;
+			n_max_order = 10;
 			n_non_ident = 0;
 			current_vertex = 0;
 			bond_list.resize(n_max_order, 0);
@@ -44,6 +44,11 @@ class fast_update
 			invC = C.inverse();
 		}
 
+		void max_order(int n_max_order_)
+		{
+			n_max_order = n_max_order_;
+			bond_list.resize(n_max_order);
+		}
 		int max_order() const
 		{
 			return n_max_order;
@@ -144,8 +149,8 @@ class fast_update
 		dmatrix_t get_L()
 		{
 			dmatrix_t L = dmatrix_t::Identity(l.n_sites(), l.n_sites());
-			//for (int n = n_max_order-1; n > current_vertex; --n)
-			for (int n = current_vertex+1; n < n_max_order; ++n)
+			for (int n = n_max_order-1; n > current_vertex; --n)
+			//for (int n = current_vertex+1; n < n_max_order; ++n)
 			{
 				if (bond_list[n] == 0) continue;
 				L *= vertex_matrix(param.lambda, n);
@@ -255,7 +260,7 @@ class fast_update
 				return;
 			dmatrix_t e = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 			dmatrix_t f = dmatrix_t::Identity(l.n_sites(), l.n_sites());
-			int bond_id = bond_list[current_vertex+1] - 1;
+			int bond_id = bond_list[current_vertex + 1] - 1;
 			std::pair<int, int> bond = lattice_bonds[bond_id];
 			if (bond_id >= 0)
 			{
@@ -279,7 +284,7 @@ class fast_update
 				return;
 			dmatrix_t e = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 			dmatrix_t f = dmatrix_t::Identity(l.n_sites(), l.n_sites());
-			int bond_id = bond_list[current_vertex-1] - 1;
+			int bond_id = bond_list[current_vertex] - 1;
 			std::pair<int, int> bond = lattice_bonds[bond_id];
 			if (bond_id >= 0)
 			{
@@ -300,15 +305,25 @@ class fast_update
 		double measure_M2()
 		{
 			double M2 = 0.;
-			int i = 0;
+			// Use translational symmetry and half-filling here
+			for (int i = 0; i < l.n_sites(); ++i)
+				for (int j = 0; j < l.n_sites(); ++j)
+				{
+					M2 += greens_function(i, j) * greens_function(i, j)
+						/ std::pow(l.n_sites(), 2.0);
+				}
+			//std::cout << "......" << std::endl;
+			M2 = 0.;
+			return M2;
+		}
+		
+		void measure_density_correlations(std::vector<double>& corr)
+		{
+			// Use translational symmetry and half-filling here
+			int i = rng() * l.n_sites();
 			for (int j = 0; j < l.n_sites(); ++j)
-			{
-				double delta_ij = (i == j ? 1. : 0.);
-				M2 += l.parity(i) * l.parity(j) * ((greens_function(i, i) - 1.)
-					* (greens_function(j, j) - 1.) - greens_function(i, j)
-					* (greens_function(j, i) - delta_ij)) / l.n_sites();
-			}
-			return M2 - 0.25;
+				corr[l.distance(i, j)] += l.parity(i) * l.parity(j)
+					* greens_function(i, j) * greens_function(i, j);
 		}
 	private:
 		void print_matrix(const dmatrix_t& m)

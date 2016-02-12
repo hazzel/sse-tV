@@ -46,6 +46,8 @@ mc::mc(const std::string& dir)
 	//Set up measurements
 	config.measure.add_observable("M2", n_prebin);
 	config.measure.add_observable("<n1>", n_prebin);
+	config.measure.add_vectorobservable("<n_r n_0>", config.l.max_distance() + 1,
+		n_prebin);
 
 	//Measure acceptance probabilities
 	config.measure.add_observable("sign", n_prebin * n_cycles);
@@ -56,6 +58,7 @@ mc::mc(const std::string& dir)
 	//Set up events
 	qmc.add_event(event_rebuild{config, config.measure}, "rebuild");
 	qmc.add_event(event_build{config, rng}, "initial build");
+	qmc.add_event(event_max_order{config, rng}, "max_order");
 	//Initialize vertex list to reduce warm up time
 	qmc.trigger_event("initial build");
 }
@@ -150,6 +153,7 @@ void mc::do_update()
 		//config.M.print_gf_from_scratch();
 		if (is_thermalized())
 			++measure_cnt;
+
 		if (is_thermalized() && n_cycles == measure_cnt)
 		{
 			qmc.do_measurement();
@@ -169,8 +173,13 @@ void mc::do_update()
 		//std::cout << "//////////////" << std::endl;
 	}
 	++sweep;
+	if (!is_thermalized())
+		qmc.trigger_event("max_order");
 	if (sweep % n_rebuild == 0)
 		qmc.trigger_event("rebuild");
+	if (sweep == n_warmup)
+		std::cout << "Max order set to " << config.M.max_order() << "."
+			<< std::endl;
 	status();
 }
 
