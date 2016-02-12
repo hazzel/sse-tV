@@ -251,7 +251,6 @@ class fast_update
 					- greens_function));
 				--n_non_ident;
 			}
-			//greens_function = (id_N + get_R() * get_L()).inverse(); 
 		}
 
 		void advance_forward()
@@ -275,7 +274,6 @@ class fast_update
 			}
 			greens_function = e * greens_function * f;
 			++current_vertex;
-			greens_function = (id_N + get_R() * get_L()).inverse(); 
 		}
 		
 		void advance_backward()
@@ -299,21 +297,17 @@ class fast_update
 			}
 			greens_function = f * greens_function * e;
 			--current_vertex;
-			greens_function = (id_N + get_R() * get_L()).inverse();
 		}
 
 		double measure_M2()
 		{
 			double M2 = 0.;
 			// Use translational symmetry and half-filling here
-			for (int i = 0; i < l.n_sites(); ++i)
-				for (int j = 0; j < l.n_sites(); ++j)
-				{
-					M2 += greens_function(i, j) * greens_function(i, j)
-						/ std::pow(l.n_sites(), 2.0);
-				}
-			//std::cout << "......" << std::endl;
-			M2 = 0.;
+			//for (int i = 0; i < l.n_sites(); ++i)
+			int i = rng() * l.n_sites();
+			for (int j = 0; j < l.n_sites(); ++j)
+				M2 += greens_function(i, j) * greens_function(i, j)
+					/ std::pow(l.n_sites(), 1.0);
 			return M2;
 		}
 		

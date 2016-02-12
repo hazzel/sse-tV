@@ -50,6 +50,7 @@ mc::mc(const std::string& dir)
 		n_prebin);
 
 	//Measure acceptance probabilities
+	config.measure.add_observable("update type 1", n_prebin * n_cycles);
 	config.measure.add_observable("sign", n_prebin * n_cycles);
 	
 	qmc.add_measure(measure_estimator{config, config.measure, pars,
@@ -151,13 +152,15 @@ void mc::do_update()
 	{
 		qmc.do_update(config.measure);
 		//config.M.print_gf_from_scratch();
-		if (is_thermalized())
-			++measure_cnt;
 
-		if (is_thermalized() && n_cycles == measure_cnt)
+		if (is_thermalized())
 		{
-			qmc.do_measurement();
-			measure_cnt = 0;
+			++measure_cnt;
+			if (n_cycles == measure_cnt)
+			{
+				qmc.do_measurement();
+				measure_cnt = 0;
+			}
 		}
 		if (n < config.M.max_order())
 		{
@@ -184,9 +187,7 @@ void mc::do_update()
 }
 
 void mc::do_measurement()
-{
-	qmc.do_measurement();
-}
+{}
 
 void mc::status()
 {
