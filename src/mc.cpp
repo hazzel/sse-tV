@@ -23,6 +23,7 @@ mc::mc(const std::string& dir)
 	config.param.V = pars.value_or_default<double>("V", 1.355);
 	config.param.lambda = std::log((2.*config.param.t + config.param.V)
 		/ (2.*config.param.t - config.param.V));
+	config.param.n_stab = pars.value_or_default<int>("stabilization", 10);
 
 	//Proposal probabilites
 	config.param.V1 = pars.value_or_default<double>("V1", 1.0);
@@ -164,13 +165,13 @@ void mc::do_update()
 		}
 		if (n < config.M.max_order())
 		{
-			config.M.advance_forward();
-		//	std::cout << "moved forward" << std::endl;
+			config.M.advance_backward();
+		//	std::cout << "moved backward" << std::endl;
 		}
 		else
 		{
-			config.M.advance_backward();
-		//	std::cout << "moved backward" << std::endl;
+			config.M.advance_forward();
+		//	std::cout << "moved forward" << std::endl;
 		}
 		//config.M.print_bonds();
 		//std::cout << "//////////////" << std::endl;
@@ -178,8 +179,8 @@ void mc::do_update()
 	++sweep;
 	if (!is_thermalized())
 		qmc.trigger_event("max_order");
-	if (sweep % n_rebuild == 0)
-		qmc.trigger_event("rebuild");
+	//if (sweep % n_rebuild == 0)
+	//	qmc.trigger_event("rebuild");
 	if (sweep == n_warmup)
 		std::cout << "Max order set to " << config.M.max_order() << "."
 			<< std::endl;
