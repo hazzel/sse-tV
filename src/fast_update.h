@@ -173,7 +173,7 @@ class fast_update
 		dmatrix_t propagator(int n, int m)
 		{
 			dmatrix_t P = dmatrix_t::Identity(l.n_sites(), l.n_sites());
-			for (int i = m; i < n; ++i)
+			for (int i = n; i >= m; --i)
 			{
 				if (bond_list[i] == 0) continue;
 				P *= vertex_matrix(param.lambda, i);
@@ -280,21 +280,33 @@ class fast_update
 		{
 			if (current_vertex == n_max_order - 1)
 				return;
-			std::cout << "move forward, current vertex = " << current_vertex
-				<< std::endl;
+//			std::cout << "move forward, current vertex = " << current_vertex
+//				<< std::endl;
 			if (current_vertex == 0)
 			{
 				equal_time_gf = (id_N + V.front() * D.front() * U.front()).inverse();
-				U.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
-				D.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
-				V.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+				//stabilize_equal_time_gf(id_N, id_N, id_N, U.back(), D.back(),
+				//	V.back());
+				U.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+				D.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+				V.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 			}
-			if ((current_vertex + 1) % n_stab_interval == 0)
+			if ((current_vertex + 2) % n_stab_interval == 0)
 			{
-				int n = (current_vertex + 1) / n_stab_interval;
-				dmatrix_t b = propagator(n * n_stab_interval,
-					(n-1) * n_stab_interval + 1);
-				store_svd_forward(b, n+1);
+				int n = (current_vertex + 2) / n_stab_interval;
+//				std::cout << "n = " << n << std::endl
+//					<< "propagator from " << n*n_stab_interval - 2 
+//					<< " to " << (n-1) * n_stab_interval << std::endl;
+//				++current_vertex;
+				dmatrix_t b;
+				if (n == 1)
+					b = propagator(n * n_stab_interval - 2,
+						(n-1) * n_stab_interval);
+				else
+					b = propagator(n * n_stab_interval - 2,
+						(n-1) * n_stab_interval - 1);
+				store_svd_forward(b, n);
+//				--current_vertex;
 			}
 			else
 			{
@@ -322,11 +334,13 @@ class fast_update
 		{
 			if (current_vertex == 0)
 				return;
-			std::cout << "move backward, current vertex = " << current_vertex
-				<< std::endl;
+//			std::cout << "move backward, current vertex = " << current_vertex
+//				<< std::endl;
 			if (current_vertex == n_max_order - 1)
 			{
 				equal_time_gf = (id_N + U.back() * D.back() * V.back()).inverse();
+				//stabilize_equal_time_gf(U.back(), D.back(), V.back(), id_N, id_N,
+				//	id_N);
 				U.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 				D.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 				V.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
@@ -334,9 +348,14 @@ class fast_update
 			if (current_vertex % n_stab_interval == 0)
 			{
 				int n = current_vertex / n_stab_interval;
-				dmatrix_t b = propagator((n + 1) * n_stab_interval,
+				//std::cout << "n = " << n << std::endl
+				//	<< "propagator from " << (n+1)*n_stab_interval - 1
+				//	<< " to " << n * n_stab_interval << std::endl;
+				//--current_vertex;
+				dmatrix_t b = propagator((n + 1) * n_stab_interval - 1,
 					n * n_stab_interval);
 				store_svd_backward(b, n);
+				//++current_vertex;
 			}
 			else
 			{
@@ -408,11 +427,15 @@ class fast_update
 				{ return 1. / s; }).asDiagonal();
 			equal_time_gf = (U_l.adjoint() * svd_solver.matrixV()) * D
 				* (svd_solver.matrixU().adjoint() * U_r.adjoint());
-			std::cout << "current vertex: " << current_vertex << std::endl;
-			std::cout << "stabilize_equal_time_gf():" << std::endl;
-			print_matrix(equal_time_gf);
-			std::cout << "correct:" << std::endl;
-			print_matrix((id_N + get_R() * get_L()).inverse());
+//			std::cout << std::endl;
+//			std::cout << "current vertex: " << current_vertex << std::endl;
+			//std::cout << "stabilize_equal_time_gf():" << std::endl;
+			//print_matrix(equal_time_gf);
+			//std::cout << "correct:" << std::endl;
+//			dmatrix_t g = (id_N + get_R() * get_L()).inverse();
+			//print_matrix(g);
+//			std::cout << "diff: " << (equal_time_gf - g).norm() << std::endl;
+//			std::cout << std::endl;
 			
 		}
 
