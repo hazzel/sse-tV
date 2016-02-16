@@ -75,8 +75,10 @@ class fast_update
 
 		void rebuild()
 		{
+			std::cout << "start rebuild" << std::endl;
 			for (int n = 1; n <= n_intervals; ++n)
 				store_svd_forward(n - 1);
+			std::cout << "rebuild done" << std::endl;
 		}
 
 		void serialize(odump& out)
@@ -251,7 +253,7 @@ class fast_update
 				e(bond.second, bond.first) = d(1, 0);
 				e(bond.second, bond.second) = d(1, 1);
 				equal_time_gf = equal_time_gf - (equal_time_gf * e * (id_N
-					- equal_time_gf));	
+					- equal_time_gf));
 				++n_non_ident;
 			}
 			// Remove bond at vertex
@@ -282,8 +284,8 @@ class fast_update
 			// Start forwards sweep
 			if (current_vertex == 1)
 			{
-				equal_time_gf = (id_N + V.front() * D.front() * U.front()).inverse();
-				//stabilize_equal_time_gf(id_N, id_N, id_N, U.back(), D.back(),
+				//equal_time_gf = (id_N + V.front() * D.front() * U.front()).inverse();
+				//recompute_equal_time_gf(id_N, id_N, id_N, U.back(), D.back(),
 				//	V.back());
 				U.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 				D.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
@@ -335,8 +337,9 @@ class fast_update
 			// Start backwards sweep
 			if (current_vertex == n_max_order)
 			{
-				equal_time_gf = (id_N + U.back() * D.back() * V.back()).inverse();
-				//stabilize_equal_time_gf(U.back(), D.back(), V.back(), id_N, id_N,
+				//rebuild();
+				//equal_time_gf = (id_N + U.back() * D.back() * V.back()).inverse();
+				//recompute_equal_time_gf(U.back(), D.back(), V.back(), id_N, id_N,
 				//	id_N);
 				U.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 				D.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
@@ -394,8 +397,7 @@ class fast_update
 			U[n+1] = svd_solver.matrixU();
 			D[n+1] = svd_solver.singularValues().asDiagonal();
 			V[n+1] = svd_solver.matrixV().adjoint() * V[n];
-			// Recompute equal time gf
-			stabilize_equal_time_gf(U_l, D_l, V_l, U[n+1], D[n+1], V[n+1]);
+			recompute_equal_time_gf(U_l, D_l, V_l, U[n+1], D[n+1], V[n+1]);
 		}
 	
 		//n = n_intervals, ..., 1 
@@ -413,11 +415,10 @@ class fast_update
 			V[n-1] = V[n] * svd_solver.matrixU();
 			D[n-1] = svd_solver.singularValues().asDiagonal();
 			U[n-1] = svd_solver.matrixV().adjoint();
-			// Recompute equal time gf
-			stabilize_equal_time_gf(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
+			recompute_equal_time_gf(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
 		}
 
-		void stabilize_equal_time_gf(const dmatrix_t& U_l, const dmatrix_t& D_l,
+		void recompute_equal_time_gf(const dmatrix_t& U_l, const dmatrix_t& D_l,
 			const dmatrix_t& V_l, const dmatrix_t& U_r, const dmatrix_t& D_r,
 			const dmatrix_t& V_r)
 		{
@@ -429,7 +430,7 @@ class fast_update
 				* (svd_solver.matrixU().adjoint() * U_r.adjoint());
 //			std::cout << std::endl;
 //			std::cout << "current vertex: " << current_vertex << std::endl;
-			//std::cout << "stabilize_equal_time_gf():" << std::endl;
+			//std::cout << "recompute_equal_time_gf():" << std::endl;
 			//print_matrix(equal_time_gf);
 			//std::cout << "correct:" << std::endl;
 			dmatrix_t g = (id_N + get_R() * get_L()).inverse();
