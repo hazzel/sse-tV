@@ -285,8 +285,7 @@ class fast_update
 			if (current_vertex == 1)
 			{
 				//equal_time_gf = (id_N + V.front() * D.front() * U.front()).inverse();
-				//recompute_equal_time_gf(id_N, id_N, id_N, U.back(), D.back(),
-				//	V.back());
+				recompute_equal_time_gf(id_N, id_N, id_N, U[1], D[1], V[1]);
 				U.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 				D.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 				V.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
@@ -311,21 +310,20 @@ class fast_update
 			++current_vertex;
 			
 			dmatrix_t g = (id_N + get_R() * get_L()).inverse();
-			//print_matrix(g);
 			double diff = (equal_time_gf - g).norm();
 			if (diff > 0.001)
 			{
+				print_bonds();
 				std::cout << "equal time gf:" << std::endl;
 				print_matrix(equal_time_gf);
 				std::cout << "correct" << std::endl;
 				print_matrix(g);
+				std::cout << "diff: " << (equal_time_gf - g).norm() << std::endl;
 			}
-			std::cout << "diff: " << (equal_time_gf - g).norm() << std::endl;
-			std::cout << std::endl;
-			
 			// Stabilize equal time gf
 			if (current_vertex % param.n_delta == 0)
 				store_svd_forward(current_vertex / param.n_delta - 1);
+			std::cout << "-----" << std::endl << std::endl;
 		}
 		
 		void advance_backward()
@@ -337,10 +335,10 @@ class fast_update
 			// Start backwards sweep
 			if (current_vertex == n_max_order)
 			{
-				//rebuild();
+				rebuild();
 				//equal_time_gf = (id_N + U.back() * D.back() * V.back()).inverse();
-				//recompute_equal_time_gf(U.back(), D.back(), V.back(), id_N, id_N,
-				//	id_N);
+				recompute_equal_time_gf(U.back(), D.back(), V.back(), id_N, id_N,
+					id_N);
 				U.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 				D.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 				V.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
@@ -365,7 +363,6 @@ class fast_update
 			--current_vertex;
 
 			dmatrix_t g = (id_N + get_R() * get_L()).inverse();
-			//print_matrix(g);
 			double diff = (equal_time_gf - g).norm();
 			if (diff > 0.001)
 			{
@@ -373,13 +370,12 @@ class fast_update
 				print_matrix(equal_time_gf);
 				std::cout << "correct" << std::endl;
 				print_matrix(g);
+				std::cout << "diff: " << (equal_time_gf - g).norm() << std::endl;
 			}
-			std::cout << "diff: " << (equal_time_gf - g).norm() << std::endl;
-			std::cout << std::endl;
-			
 			// Stabilize equal time gf
 			if (current_vertex % param.n_delta == 0 || current_vertex == 1)
 				store_svd_backward(current_vertex / param.n_delta + 1);
+			std::cout << "-----" << std::endl << std::endl;
 		}
 
 		// n = 0, ..., n_intervals - 1
@@ -428,6 +424,7 @@ class fast_update
 				{ return 1. / s; }).asDiagonal();
 			equal_time_gf = (U_l.adjoint() * svd_solver.matrixV()) * D
 				* (svd_solver.matrixU().adjoint() * U_r.adjoint());
+
 //			std::cout << std::endl;
 //			std::cout << "current vertex: " << current_vertex << std::endl;
 			//std::cout << "recompute_equal_time_gf():" << std::endl;
