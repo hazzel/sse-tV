@@ -151,8 +151,11 @@ void mc::do_update()
 {
 	for (int n = 0; n < 2*config.M.max_order(); ++n)
 	{
+		if (n == 0)
+			config.M.start_backward_sweep();
+		else if (n == config.M.max_order())
+			config.M.start_forward_sweep();
 		qmc.do_update(config.measure);
-		//config.M.print_gf_from_scratch();
 
 		if (is_thermalized())
 		{
@@ -164,17 +167,9 @@ void mc::do_update()
 			}
 		}
 		if (n < config.M.max_order())
-		{
 			config.M.advance_backward();
-		//	std::cout << "moved backward" << std::endl;
-		}
 		else
-		{
 			config.M.advance_forward();
-		//	std::cout << "moved forward" << std::endl;
-		}
-		//config.M.print_bonds();
-		//std::cout << "//////////////" << std::endl;
 	}
 	++sweep;
 	if (!is_thermalized())
