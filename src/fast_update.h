@@ -284,8 +284,12 @@ class fast_update
 			// Start forwards sweep
 			if (current_vertex == 1)
 			{
-				//equal_time_gf = (id_N + V.front() * D.front() * U.front()).inverse();
+				dmatrix_t g = (id_N + V.front() * D.front() * U.front()).inverse();
 				recompute_equal_time_gf(id_N, id_N, id_N, U[1], D[1], V[1]);
+				std::cout << "recomputed g" << std::endl;
+				print_matrix(g);
+				std::cout << "recomputed equal_time_gf" << std::endl;
+				print_matrix(equal_time_gf);
 				U.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 				D.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 				V.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
