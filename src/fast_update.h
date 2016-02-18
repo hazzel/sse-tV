@@ -25,11 +25,10 @@ class fast_update
 				for (auto j : l.neighbors(i, "nearest neighbors"))
 					if (i < j)
 						lattice_bonds.push_back({i, j});
-			max_order(10);
 			n_non_ident = 0;
-			equal_time_gf = 0.5 * dmatrix_t::Identity(l.n_sites(), l.n_sites());
 			id_2 = matrix_t<2, 2>::Identity();
 			id_N = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			equal_time_gf = 0.5 * id_N; 
 			dmatrix_t expLam = vertex_matrix(param.lambda);
 			dmatrix_t invExpLam = vertex_matrix(-param.lambda);
 			A = vertex_block(expLam);
@@ -38,6 +37,7 @@ class fast_update
 			invB = B.inverse();
 			C = invA - id_2;
 			invC = C.inverse();
+			max_order(100);
 		}
 
 		void max_order(int n_max_order_)
@@ -91,7 +91,7 @@ class fast_update
 
 		dmatrix_t vertex_matrix(double lambda, int vertex_id)
 		{
-			dmatrix_t lam = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			dmatrix_t lam = id_N; 
 			int bond_id = bond_list[vertex_id-1] - 1;
 			if (bond_id < 0)
 				return lam;
@@ -129,7 +129,7 @@ class fast_update
 		{
 			int bond_id = bond_list[vertex_id-1] - 1;
 			if (bond_id < 0)
-				return matrix_t<2, 2>::Identity();
+				return id_2; 
 			std::pair<int, int> bond = lattice_bonds[bond_id];
 			matrix_t<2, 2> block;
 			block << m(bond.first, bond.first), m(bond.first, bond.second),
@@ -157,7 +157,7 @@ class fast_update
 
 		dmatrix_t get_R()
 		{
-			dmatrix_t R = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			dmatrix_t R = id_N; 
 			for (int n = current_vertex; n >= 1; --n)
 			{
 				if (bond_list[n-1] == 0) continue;
@@ -168,7 +168,7 @@ class fast_update
 		
 		dmatrix_t get_L()
 		{
-			dmatrix_t L = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			dmatrix_t L = id_N; 
 			for (int n = n_max_order; n > current_vertex; --n)
 			{
 				if (bond_list[n-1] == 0) continue;
@@ -179,7 +179,7 @@ class fast_update
 		
 		dmatrix_t propagator(int n, int m)
 		{
-			dmatrix_t P = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			dmatrix_t P = id_N; 
 			for (int i = n; i > m; --i)
 			{
 				if (bond_list[i-1] == 0) continue;
@@ -288,18 +288,18 @@ class fast_update
 		{
 			//recompute_equal_time_gf(id_N, id_N, id_N, V.front(), D.front(),
 			//	U.front());
-			U.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
-			D.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
-			V.front() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			U.front() = id_N; 
+			D.front() = id_N;
+			V.front() = id_N;
 		}
 
 		void start_backward_sweep()
 		{
 			//recompute_equal_time_gf(U.back(), D.back(), V.back(), id_N, id_N,
 			//	id_N);
-			U.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
-			D.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
-			V.back() = dmatrix_t::Identity(l.n_sites(), l.n_sites());
+			U.back() = id_N;
+			D.back() = id_N;
+			V.back() = id_N;
 		}
 
 		void advance_forward()
@@ -366,14 +366,16 @@ class fast_update
 			dmatrix_t U_l = U[n+1];
 			dmatrix_t D_l = D[n+1];
 			dmatrix_t V_l = V[n+1];
-			dmatrix_t b = propagator((n+1) * param.n_delta, n * param.n_delta);
+			//dmatrix_t b = propagator((n+1) * param.n_delta, n * param.n_delta);
+			int nmin = n * param.n_delta + (n == 1);
+			dmatrix_t b = propagator((n+1) * param.n_delta, nmin);
 			svd_solver.compute(b * U[n] * D[n], Eigen::ComputeThinU |
 				Eigen::ComputeThinV);
 			U[n+1] = svd_solver.matrixU();
 			D[n+1] = svd_solver.singularValues().asDiagonal();
 			V[n+1] = svd_solver.matrixV().adjoint() * V[n];
 
-			
+			/*	
 			dmatrix_t b1 = propagator((n+1) * param.n_delta, 0);
 			dmatrix_t b2 = propagator(n_max_order, (n+1) * param.n_delta);
 			svd_solver.compute(b2, Eigen::ComputeThinU | Eigen::ComputeThinV);
@@ -384,8 +386,7 @@ class fast_update
 			U[n+1] = svd_solver.matrixU();
 			D[n+1] = svd_solver.singularValues().asDiagonal();
 			V[n+1] = svd_solver.matrixV().adjoint();
-
-			equal_time_gf = (id_N + b1 * b2).inverse();
+			*/
 
 			/*
 			std::cout << "B(beta, (n+1)delta)" << std::endl;
@@ -399,7 +400,7 @@ class fast_update
 			std::cout << "U * D * V" << std::endl;
 			print_matrix(U[n+1] * D[n+1] * V[n+1]);
 			*/
-			//recompute_equal_time_gf(U_l, D_l, V_l, U[n+1], D[n+1], V[n+1]);
+			recompute_equal_time_gf(U_l, D_l, V_l, U[n+1], D[n+1], V[n+1]);
 		}
 	
 		//n = n_intervals, ..., 1 
@@ -408,7 +409,8 @@ class fast_update
 			std::cout << "n = " << n - 1 << std::endl
 				<< "propagator from " << n*param.n_delta
 				<< " to " << (n-1) * param.n_delta << std::endl;
-			dmatrix_t b = propagator(n * param.n_delta, (n-1) * param.n_delta);
+			dmatrix_t b = propagator(n * param.n_delta, current_vertex);
+			//dmatrix_t b = propagator(n * param.n_delta, (n-1) * param.delta);
 			svd_solver.compute(D[n] * U[n] * b, Eigen::ComputeThinU |
 				Eigen::ComputeThinV);
 			dmatrix_t U_r = U[n-1];
@@ -418,20 +420,19 @@ class fast_update
 			D[n-1] = svd_solver.singularValues().asDiagonal();
 			U[n-1] = svd_solver.matrixV().adjoint();
 			
-			
+			/*
 			dmatrix_t b1 = propagator(current_vertex, 0);
 			dmatrix_t b2 = propagator(n_max_order, current_vertex);
-			svd_solver.compute(b2, Eigen::ComputeThinU | Eigen::ComputeThinV);
+			svd_solver.compute(b1, Eigen::ComputeThinU | Eigen::ComputeThinV);
 			U_r = svd_solver.matrixU();
 			D_r = svd_solver.singularValues().asDiagonal();
 			V_r = svd_solver.matrixV().adjoint();
-			svd_solver.compute(b1, Eigen::ComputeThinU | Eigen::ComputeThinV);
+			svd_solver.compute(b2, Eigen::ComputeThinU | Eigen::ComputeThinV);
 			V[n-1] = svd_solver.matrixU();
 			D[n-1] = svd_solver.singularValues().asDiagonal();
 			U[n-1] = svd_solver.matrixV().adjoint();
+			*/
 
-			equal_time_gf = (id_N + b1 * b2).inverse();
-			
 			/*
 			std::cout << "B((n-1)delta, 0)" << std::endl;
 			dmatrix_t t = propagator((n-1) * param.n_delta, 0);
@@ -444,7 +445,7 @@ class fast_update
 			std::cout << "V * D * U" << std::endl;
 			print_matrix(V[n-1] * D[n-1] * U[n-1]);
 			*/
-			//recompute_equal_time_gf(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
+			recompute_equal_time_gf(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
 		}
 
 		void recompute_equal_time_gf(const dmatrix_t& U_l, const dmatrix_t& D_l,
@@ -457,8 +458,9 @@ class fast_update
 			dmatrix_t D = svd_solver.singularValues().unaryExpr([](double s)
 				{ return 1. / s; }).asDiagonal();
 			dmatrix_t old_gf = equal_time_gf;
-			equal_time_gf = (U_l.adjoint() * svd_solver.matrixV()) * D
-				* (svd_solver.matrixU().adjoint() * U_r.adjoint());
+			//equal_time_gf = (U_l.adjoint() * svd_solver.matrixV()) * D
+			//	* (svd_solver.matrixU().adjoint() * U_r.adjoint());
+			equal_time_gf = (id_N + U_r * D_r * V_r * V_l * D_l * U_l).inverse();
 
 //			std::cout << std::endl;
 //			std::cout << "current vertex: " << current_vertex << std::endl;
