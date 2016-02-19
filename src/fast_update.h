@@ -320,7 +320,6 @@ class fast_update
 			double diff = (equal_time_gf - g).norm();
 			if (diff > 0.001)
 			{
-				print_bonds();
 				std::cout << "equal time gf:" << std::endl;
 				print_matrix(equal_time_gf);
 				std::cout << "correct" << std::endl;
@@ -367,15 +366,13 @@ class fast_update
 		// n = 0, ..., n_intervals - 1
 		void store_svd_forward(int n)
 		{
-			std::cout << "n = " << n + 1 << std::endl
+			std::cout << "n = " << n << std::endl
 				<< "propagator from " << (n+1)*param.n_delta
 				<< " to " << n * param.n_delta << std::endl;
 			dmatrix_t U_l = U[n+1];
 			dmatrix_t D_l = D[n+1];
 			dmatrix_t V_l = V[n+1];
 			dmatrix_t b = propagator((n+1) * param.n_delta, n * param.n_delta);
-			//int nmin = n * param.n_delta + (n == 1);
-			//dmatrix_t b = propagator((n+1) * param.n_delta, nmin);
 			svd_solver.compute(b * U[n] * D[n], Eigen::ComputeThinU |
 				Eigen::ComputeThinV);
 			U[n+1] = svd_solver.matrixU();
@@ -383,15 +380,10 @@ class fast_update
 			V[n+1] = svd_solver.matrixV().adjoint() * V[n];
 
 			dmatrix_t b1 = propagator((n+1) * param.n_delta, 0);
-			dmatrix_t b2 = propagator(n_max_order, (n+1) * param.n_delta);
-			svd_solver.compute(b2, Eigen::ComputeThinU | Eigen::ComputeThinV);
-			V_l = svd_solver.matrixU();
-			D_l = svd_solver.singularValues().asDiagonal();
-			U_l = svd_solver.matrixV().adjoint();
 			svd_solver.compute(b1, Eigen::ComputeThinU | Eigen::ComputeThinV);
-			U[n+1] = svd_solver.matrixU();
-			D[n+1] = svd_solver.singularValues().asDiagonal();
-			V[n+1] = svd_solver.matrixV().adjoint();
+			//U[n+1] = svd_solver.matrixU();
+			//D[n+1] = svd_solver.singularValues().asDiagonal();
+			//V[n+1] = svd_solver.matrixV().adjoint();
 
 			/*
 			std::cout << "B(beta, (n+1)delta)" << std::endl;
@@ -425,16 +417,11 @@ class fast_update
 			D[n-1] = svd_solver.singularValues().asDiagonal();
 			U[n-1] = svd_solver.matrixV().adjoint();
 		
-			dmatrix_t b1 = propagator(current_vertex, 0);
-			dmatrix_t b2 = propagator(n_max_order, current_vertex);
+			dmatrix_t b1 = propagator((n-1)*param.n_delta, 0);
 			svd_solver.compute(b1, Eigen::ComputeThinU | Eigen::ComputeThinV);
 			U_r = svd_solver.matrixU();
 			D_r = svd_solver.singularValues().asDiagonal();
 			V_r = svd_solver.matrixV().adjoint();
-			svd_solver.compute(b2, Eigen::ComputeThinU | Eigen::ComputeThinV);
-			V[n-1] = svd_solver.matrixU();
-			D[n-1] = svd_solver.singularValues().asDiagonal();
-			U[n-1] = svd_solver.matrixV().adjoint();
 
 			/*
 			std::cout << "B((n-1)delta, 0)" << std::endl;

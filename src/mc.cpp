@@ -149,6 +149,7 @@ bool mc::is_thermalized()
 
 void mc::do_update()
 {
+	std::cout << "start backward sweep" << std::endl;
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		qmc.do_update(config.measure);
@@ -163,6 +164,7 @@ void mc::do_update()
 		}
 		config.M.advance_backward();
 	}
+	std::cout << "start forward sweep" << std::endl;
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		config.M.advance_forward();
