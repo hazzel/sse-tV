@@ -76,9 +76,11 @@ class fast_update
 		void rebuild()
 		{
 			std::cout << "start rebuild" << std::endl;
+			rebuilding = true;
 			for (int n = 1; n <= n_intervals; ++n)
 				store_svd_forward(n - 1);
 			std::cout << "rebuild done" << std::endl;
+			rebuilding = false;
 		}
 
 		void serialize(odump& out)
@@ -242,7 +244,8 @@ class fast_update
 				matrix_t<2, 2> d = id_2 + C * (id_2 - vertex_block(equal_time_gf,
 					current_vertex));
 				return d.determinant() * ((n_max_order - n_non_ident + 1.) 
-					* std::sinh(param.lambda)) / (l.n_bonds() * param.beta * param.t);
+					* std::sinh(param.lambda)) / (l.n_bonds() * param.beta
+					* param.t);
 			}
 		}
 
@@ -286,8 +289,8 @@ class fast_update
 
 		void start_forward_sweep()
 		{
-			//recompute_equal_time_gf(id_N, id_N, id_N, V.front(), D.front(),
-			//	U.front());
+			recompute_equal_time_gf(U.front(), D.front(), V.front(), id_N, id_N,
+				id_N);
 			U.front() = id_N; 
 			D.front() = id_N;
 			V.front() = id_N;
@@ -295,8 +298,8 @@ class fast_update
 
 		void start_backward_sweep()
 		{
-			//recompute_equal_time_gf(U.back(), D.back(), V.back(), id_N, id_N,
-			//	id_N);
+			recompute_equal_time_gf(id_N, id_N, id_N, U.back(), D.back(),
+				V.back());
 			U.back() = id_N;
 			D.back() = id_N;
 			V.back() = id_N;
@@ -328,11 +331,13 @@ class fast_update
 			if (current_vertex % param.n_delta == 0)
 				store_svd_forward(current_vertex / param.n_delta - 1);
 			std::cout << "-----" << std::endl << std::endl;
+			if (current_vertex == n_max_order)
+				start_backward_sweep();
 		}
 		
 		void advance_backward()
 		{
-			if (current_vertex == 1)
+			if (current_vertex == 0)
 				return;
 			std::cout << "move backward, current vertex = " << current_vertex
 				<< ", non_ident = " << n_non_ident << std::endl;
@@ -352,9 +357,11 @@ class fast_update
 				std::cout << "diff: " << (equal_time_gf - g).norm() << std::endl;
 			}
 			// Stabilize equal time gf
-			if (current_vertex % param.n_delta == 0 || current_vertex == 1)
+			if (current_vertex % param.n_delta == 0)
 				store_svd_backward(current_vertex / param.n_delta + 1);
 			std::cout << "-----" << std::endl << std::endl;
+			if (current_vertex == 0)
+				start_forward_sweep();
 		}
 
 		// n = 0, ..., n_intervals - 1
@@ -366,16 +373,15 @@ class fast_update
 			dmatrix_t U_l = U[n+1];
 			dmatrix_t D_l = D[n+1];
 			dmatrix_t V_l = V[n+1];
-			//dmatrix_t b = propagator((n+1) * param.n_delta, n * param.n_delta);
-			int nmin = n * param.n_delta + (n == 1);
-			dmatrix_t b = propagator((n+1) * param.n_delta, nmin);
+			dmatrix_t b = propagator((n+1) * param.n_delta, n * param.n_delta);
+			//int nmin = n * param.n_delta + (n == 1);
+			//dmatrix_t b = propagator((n+1) * param.n_delta, nmin);
 			svd_solver.compute(b * U[n] * D[n], Eigen::ComputeThinU |
 				Eigen::ComputeThinV);
 			U[n+1] = svd_solver.matrixU();
 			D[n+1] = svd_solver.singularValues().asDiagonal();
 			V[n+1] = svd_solver.matrixV().adjoint() * V[n];
 
-			/*	
 			dmatrix_t b1 = propagator((n+1) * param.n_delta, 0);
 			dmatrix_t b2 = propagator(n_max_order, (n+1) * param.n_delta);
 			svd_solver.compute(b2, Eigen::ComputeThinU | Eigen::ComputeThinV);
@@ -386,7 +392,6 @@ class fast_update
 			U[n+1] = svd_solver.matrixU();
 			D[n+1] = svd_solver.singularValues().asDiagonal();
 			V[n+1] = svd_solver.matrixV().adjoint();
-			*/
 
 			/*
 			std::cout << "B(beta, (n+1)delta)" << std::endl;
@@ -406,11 +411,11 @@ class fast_update
 		//n = n_intervals, ..., 1 
 		void store_svd_backward(int n)
 		{
-			std::cout << "n = " << n - 1 << std::endl
-				<< "propagator from " << n*param.n_delta
-				<< " to " << (n-1) * param.n_delta << std::endl;
-			dmatrix_t b = propagator(n * param.n_delta, current_vertex);
-			//dmatrix_t b = propagator(n * param.n_delta, (n-1) * param.delta);
+			std::cout << "store_backward: current_vertex = "
+				<< current_vertex <<	", n = " << n << std::endl
+				<< "propagator from " << n * param.n_delta
+				<< " to " << (n-1)*param.n_delta << std::endl;
+			dmatrix_t b = propagator(n * param.n_delta, (n-1) * param.n_delta);
 			svd_solver.compute(D[n] * U[n] * b, Eigen::ComputeThinU |
 				Eigen::ComputeThinV);
 			dmatrix_t U_r = U[n-1];
@@ -419,8 +424,7 @@ class fast_update
 			V[n-1] = V[n] * svd_solver.matrixU();
 			D[n-1] = svd_solver.singularValues().asDiagonal();
 			U[n-1] = svd_solver.matrixV().adjoint();
-			
-			/*
+		
 			dmatrix_t b1 = propagator(current_vertex, 0);
 			dmatrix_t b2 = propagator(n_max_order, current_vertex);
 			svd_solver.compute(b1, Eigen::ComputeThinU | Eigen::ComputeThinV);
@@ -431,7 +435,6 @@ class fast_update
 			V[n-1] = svd_solver.matrixU();
 			D[n-1] = svd_solver.singularValues().asDiagonal();
 			U[n-1] = svd_solver.matrixV().adjoint();
-			*/
 
 			/*
 			std::cout << "B((n-1)delta, 0)" << std::endl;
@@ -452,15 +455,13 @@ class fast_update
 			const dmatrix_t& V_l, const dmatrix_t& U_r, const dmatrix_t& D_r,
 			const dmatrix_t& V_r)
 		{
-			//return;
 			svd_solver.compute(U_r.adjoint() * U_l.adjoint() + D_r * (V_r * V_l)
 				* D_l, Eigen::ComputeThinU | Eigen::ComputeThinV);
 			dmatrix_t D = svd_solver.singularValues().unaryExpr([](double s)
 				{ return 1. / s; }).asDiagonal();
 			dmatrix_t old_gf = equal_time_gf;
-			//equal_time_gf = (U_l.adjoint() * svd_solver.matrixV()) * D
-			//	* (svd_solver.matrixU().adjoint() * U_r.adjoint());
-			equal_time_gf = (id_N + U_r * D_r * V_r * V_l * D_l * U_l).inverse();
+			equal_time_gf = (U_l.adjoint() * svd_solver.matrixV()) * D
+				* (svd_solver.matrixU().adjoint() * U_r.adjoint());
 
 //			std::cout << std::endl;
 //			std::cout << "current vertex: " << current_vertex << std::endl;
@@ -470,7 +471,7 @@ class fast_update
 			dmatrix_t g = (id_N + get_R() * get_L()).inverse();
 			//print_matrix(g);
 			double diff = (equal_time_gf - g).norm();
-			if (diff > 0.001)
+			if (diff > 0.001 && !rebuilding)
 			{
 				std::cout << "recomputed equal time gf:" << std::endl;
 				print_matrix(equal_time_gf);
@@ -531,4 +532,5 @@ class fast_update
 		std::vector<dmatrix_t> D;
 		std::vector<dmatrix_t> V;
 		Eigen::JacobiSVD<dmatrix_t> svd_solver;
+		bool rebuilding = false;
 };

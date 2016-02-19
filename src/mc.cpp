@@ -149,14 +149,9 @@ bool mc::is_thermalized()
 
 void mc::do_update()
 {
-	for (int n = 0; n < 2*config.M.max_order(); ++n)
+	for (int n = 0; n < config.M.max_order(); ++n)
 	{
-		if (n == 0)
-			config.M.start_backward_sweep();
-		else if (n == config.M.max_order())
-			config.M.start_forward_sweep();
 		qmc.do_update(config.measure);
-
 		if (is_thermalized())
 		{
 			++measure_cnt;
@@ -166,12 +161,24 @@ void mc::do_update()
 				measure_cnt = 0;
 			}
 		}
-		if (n < config.M.max_order())
-			config.M.advance_backward();
-		else
-			config.M.advance_forward();
+		config.M.advance_backward();
+	}
+	for (int n = 0; n < config.M.max_order(); ++n)
+	{
+		config.M.advance_forward();
+		qmc.do_update(config.measure);
+		if (is_thermalized())
+		{
+			++measure_cnt;
+			if (n_cycles == measure_cnt)
+			{
+				qmc.do_measurement();
+				measure_cnt = 0;
+			}
+		}
 	}
 	++sweep;
+	//qmc.trigger_event("rebuild");
 	if (!is_thermalized())
 		qmc.trigger_event("max_order");
 	//if (sweep % n_rebuild == 0)
