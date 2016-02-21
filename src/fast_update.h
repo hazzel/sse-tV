@@ -37,7 +37,7 @@ class fast_update
 			invB = B.inverse();
 			C = invA - id_2;
 			invC = C.inverse();
-			max_order(100);
+			max_order(10000);
 		}
 
 		void max_order(int n_max_order_)
@@ -55,6 +55,7 @@ class fast_update
 			{
 				U[n] = id_N; D[n] = id_N; V[n] = id_N;
 			}
+			rebuild();
 			std::cout << "max order set to " << n_max_order << std::endl
 				<< "n_intervals set to " << n_intervals << std::endl;
 		}
@@ -68,19 +69,32 @@ class fast_update
 			return n_non_ident;
 		}
 
-		int get_current_bond()
+		int get_current_bond() const
 		{
 			return bond_list[current_vertex-1];
 		}
 
+		int get_current_vertex() const
+		{
+			return current_vertex;
+		}
+
 		void rebuild()
 		{
-			std::cout << "start rebuild" << std::endl;
-			rebuilding = true;
+			for (int i = 0; i < bond_list.size(); ++i)
+				bond_list[i] = 0;
+			equal_time_gf = 0.5 * id_N; 
+			/*
 			for (int n = 1; n <= n_intervals; ++n)
-				store_svd_forward(n - 1);
-			std::cout << "rebuild done" << std::endl;
-			rebuilding = false;
+			{
+				dmatrix_t b = propagator(n * param.n_delta, 0);
+				svd_solver.compute(b, Eigen::ComputeThinU | Eigen::ComputeThinV);
+				U[n] = svd_solver.matrixU();
+				D[n] = svd_solver.singularValues().asDiagonal();
+				V[n] = svd_solver.matrixV().adjoint();
+			}
+			*/
+
 		}
 
 		void serialize(odump& out)
@@ -190,30 +204,6 @@ class fast_update
 			return P;
 		}
 
-		void print_gf_from_scratch()
-		{
-			std::cout << "current vertex: " << current_vertex
-				<< ", non_ident: " << n_non_ident << std::endl;
-			dmatrix_t G = (id_N + get_R()*get_L()).inverse();
-			std::cout << "|G-Gp| = " << (G-equal_time_gf).norm() << std::endl;
-			std::cout << "differences at" << std::endl;
-			for (int i = 0; i < l.n_sites(); ++i)
-				for (int j = 0; j < l.n_sites(); ++j)
-					if (std::abs(G(i, j) - equal_time_gf(i, j)) > 0.000001)
-						std::cout << i << ", " << j << std::endl;
-			std::cout << std::endl;
-			if ((G-equal_time_gf).norm() > 0.00001)
-			{
-				print_bonds();
-				print_matrix(G);
-				print_matrix(equal_time_gf);
-			}
-			//std::cout << "G from scratch" << std::endl;
-			//print_matrix(G);
-			//std::cout << "G from update" << std::endl;
-			//print_matrix(equal_time_gf);
-		}
-
 		void print_bonds()
 		{
 			std::cout << "print_bonds()" << std::endl;
@@ -309,13 +299,12 @@ class fast_update
 		{
 			if (current_vertex == n_max_order)
 				return;
-			std::cout << "move forward, current vertex = " << current_vertex
-				<< ", non_ident = " << n_non_ident << std::endl;
 			// Wrap equal time gf forwards
 			equal_time_gf = vertex_matrix(param.lambda, current_vertex + 1)
 				* equal_time_gf * vertex_matrix(-param.lambda, current_vertex + 1);
 			++current_vertex;
-			
+		
+			/*
 			dmatrix_t g = (id_N + get_R() * get_L()).inverse();
 			double diff = (equal_time_gf - g).norm();
 			if (diff > 0.001)
@@ -326,25 +315,19 @@ class fast_update
 				print_matrix(g);
 				std::cout << "diff: " << (equal_time_gf - g).norm() << std::endl;
 			}
-			// Stabilize equal time gf
-			if (current_vertex % param.n_delta == 0)
-				store_svd_forward(current_vertex / param.n_delta - 1);
-			std::cout << "-----" << std::endl << std::endl;
-			if (current_vertex == n_max_order)
-				start_backward_sweep();
+			*/
 		}
 		
 		void advance_backward()
 		{
 			if (current_vertex == 0)
 				return;
-			std::cout << "move backward, current vertex = " << current_vertex
-				<< ", non_ident = " << n_non_ident << std::endl;
 			// Wrap equal time gf backwards
 			equal_time_gf = vertex_matrix(-param.lambda, current_vertex)
 				* equal_time_gf * vertex_matrix(param.lambda, current_vertex);
 			--current_vertex;
 
+			/*
 			dmatrix_t g = (id_N + get_R() * get_L()).inverse();
 			double diff = (equal_time_gf - g).norm();
 			if (diff > 0.001)
@@ -355,20 +338,15 @@ class fast_update
 				print_matrix(g);
 				std::cout << "diff: " << (equal_time_gf - g).norm() << std::endl;
 			}
-			// Stabilize equal time gf
-			if (current_vertex % param.n_delta == 0)
-				store_svd_backward(current_vertex / param.n_delta + 1);
-			std::cout << "-----" << std::endl << std::endl;
-			if (current_vertex == 0)
-				start_forward_sweep();
+			*/
 		}
 
-		// n = 0, ..., n_intervals - 1
-		void store_svd_forward(int n)
+		void stabilize_forward()
 		{
-			std::cout << "n = " << n << std::endl
-				<< "propagator from " << (n+1)*param.n_delta
-				<< " to " << n * param.n_delta << std::endl;
+			if (current_vertex % param.n_delta != 0)
+				return;
+			// n = 0, ..., n_intervals - 1
+			int n = current_vertex / param.n_delta - 1;
 			dmatrix_t U_l = U[n+1];
 			dmatrix_t D_l = D[n+1];
 			dmatrix_t V_l = V[n+1];
@@ -378,35 +356,18 @@ class fast_update
 			U[n+1] = svd_solver.matrixU();
 			D[n+1] = svd_solver.singularValues().asDiagonal();
 			V[n+1] = svd_solver.matrixV().adjoint() * V[n];
-
-			dmatrix_t b1 = propagator((n+1) * param.n_delta, 0);
-			svd_solver.compute(b1, Eigen::ComputeThinU | Eigen::ComputeThinV);
-			//U[n+1] = svd_solver.matrixU();
-			//D[n+1] = svd_solver.singularValues().asDiagonal();
-			//V[n+1] = svd_solver.matrixV().adjoint();
-
-			/*
-			std::cout << "B(beta, (n+1)delta)" << std::endl;
-			dmatrix_t t = propagator(n_max_order, (n+1) * param.n_delta);
-			print_matrix(t);
-			std::cout << "V_l * D_l * U_l" << std::endl;
-			print_matrix(V_l * D_l * U_l);
-			std::cout << "B((n+1)delta, 0)" << std::endl;
-			t = propagator((n+1) * param.n_delta, 0);
-			print_matrix(t);
-			std::cout << "U * D * V" << std::endl;
-			print_matrix(U[n+1] * D[n+1] * V[n+1]);
-			*/
 			recompute_equal_time_gf(U_l, D_l, V_l, U[n+1], D[n+1], V[n+1]);
+			
+			if (current_vertex == n_max_order)
+				start_backward_sweep();
 		}
 	
-		//n = n_intervals, ..., 1 
-		void store_svd_backward(int n)
+		void stabilize_backward()
 		{
-			std::cout << "store_backward: current_vertex = "
-				<< current_vertex <<	", n = " << n << std::endl
-				<< "propagator from " << n * param.n_delta
-				<< " to " << (n-1)*param.n_delta << std::endl;
+			if (current_vertex % param.n_delta != 0)
+				return;
+			//n = n_intervals, ..., 1 
+			int n = current_vertex / param.n_delta + 1;
 			dmatrix_t b = propagator(n * param.n_delta, (n-1) * param.n_delta);
 			svd_solver.compute(D[n] * U[n] * b, Eigen::ComputeThinU |
 				Eigen::ComputeThinV);
@@ -417,25 +378,10 @@ class fast_update
 			D[n-1] = svd_solver.singularValues().asDiagonal();
 			U[n-1] = svd_solver.matrixV().adjoint();
 		
-			dmatrix_t b1 = propagator((n-1)*param.n_delta, 0);
-			svd_solver.compute(b1, Eigen::ComputeThinU | Eigen::ComputeThinV);
-			U_r = svd_solver.matrixU();
-			D_r = svd_solver.singularValues().asDiagonal();
-			V_r = svd_solver.matrixV().adjoint();
-
-			/*
-			std::cout << "B((n-1)delta, 0)" << std::endl;
-			dmatrix_t t = propagator((n-1) * param.n_delta, 0);
-			print_matrix(t);
-			std::cout << "U_r * D_r * V_r" << std::endl;
-			print_matrix(U_r * D_r * V_r);
-			t = propagator(n_max_order, (n-1) * param.n_delta);
-			std::cout << "B(beta, (n-1)delta)" << std::endl;
-			print_matrix(t);
-			std::cout << "V * D * U" << std::endl;
-			print_matrix(V[n-1] * D[n-1] * U[n-1]);
-			*/
 			recompute_equal_time_gf(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
+			
+			if (current_vertex == 0)
+				start_forward_sweep();
 		}
 
 		void recompute_equal_time_gf(const dmatrix_t& U_l, const dmatrix_t& D_l,
@@ -446,27 +392,8 @@ class fast_update
 				* D_l, Eigen::ComputeThinU | Eigen::ComputeThinV);
 			dmatrix_t D = svd_solver.singularValues().unaryExpr([](double s)
 				{ return 1. / s; }).asDiagonal();
-			dmatrix_t old_gf = equal_time_gf;
 			equal_time_gf = (U_l.adjoint() * svd_solver.matrixV()) * D
 				* (svd_solver.matrixU().adjoint() * U_r.adjoint());
-
-//			std::cout << std::endl;
-//			std::cout << "current vertex: " << current_vertex << std::endl;
-			//std::cout << "recompute_equal_time_gf():" << std::endl;
-			//print_matrix(equal_time_gf);
-			//std::cout << "correct:" << std::endl;
-			dmatrix_t g = (id_N + get_R() * get_L()).inverse();
-			//print_matrix(g);
-			double diff = (equal_time_gf - g).norm();
-			if (diff > 0.001 && !rebuilding)
-			{
-				std::cout << "recomputed equal time gf:" << std::endl;
-				print_matrix(equal_time_gf);
-				std::cout << "id - getR * getL" << std::endl;
-				print_matrix(g);
-			}
-			std::cout << "diff: " << (equal_time_gf - g).norm() << std::endl;
-			std::cout << std::endl;
 		}
 
 		double measure_M2()
@@ -519,5 +446,4 @@ class fast_update
 		std::vector<dmatrix_t> D;
 		std::vector<dmatrix_t> V;
 		Eigen::JacobiSVD<dmatrix_t> svd_solver;
-		bool rebuilding = false;
 };
