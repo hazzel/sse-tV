@@ -32,5 +32,7 @@ struct event_max_order
 	{
 		if (config.M.non_ident() >= 0.75 * config.M.max_order())
 			config.M.max_order(std::max(10., 4./3. * config.M.max_order()));
+		else if (config.M.non_ident() <= 0.25 * config.M.max_order())
+			config.M.max_order(std::max(10., 1./2. * config.M.max_order()));
 	}
 };

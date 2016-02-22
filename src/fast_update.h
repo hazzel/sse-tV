@@ -37,17 +37,25 @@ class fast_update
 			invB = B.inverse();
 			C = invA - id_2;
 			invC = C.inverse();
-			max_order(10000);
+			max_order(20);
 		}
 
 		void max_order(int n_max_order_)
 		{
+			int old_max_order = n_max_order;
 			n_max_order = n_max_order_;
 			if (n_max_order_ % param.n_delta != 0)
 				n_max_order += param.n_delta - n_max_order_ % param.n_delta;
 			current_vertex = n_max_order;
 			n_intervals = n_max_order / param.n_delta;
-			bond_list.resize(n_max_order, 0);
+			if (old_max_order < n_max_order)
+				bond_list.resize(n_max_order, 0);
+			else
+			{
+				bond_list.erase(std::remove(bond_list.begin(), bond_list.end(), 0),
+					bond_list.end());
+				bond_list.resize(n_max_order, 0);
+			}
 			U.resize(n_intervals + 1);
 			D.resize(n_intervals + 1);
 			V.resize(n_intervals + 1);
@@ -56,9 +64,10 @@ class fast_update
 				U[n] = id_N; D[n] = id_N; V[n] = id_N;
 			}
 			rebuild();
-			std::cout << "max order set to " << n_max_order << std::endl
-				<< "n_intervals set to " << n_intervals << std::endl;
+			std::cout << "Max order set from " << old_max_order << " to "
+				<< n_max_order << ", current order is " << n_non_ident << std::endl;
 		}
+
 		int max_order() const
 		{
 			return n_max_order;
@@ -81,20 +90,17 @@ class fast_update
 
 		void rebuild()
 		{
-			for (int i = 0; i < bond_list.size(); ++i)
-				bond_list[i] = 0;
-			equal_time_gf = 0.5 * id_N; 
-			/*
+			U[0] = id_N; D[0] = id_N; V[0] = id_N;
 			for (int n = 1; n <= n_intervals; ++n)
 			{
-				dmatrix_t b = propagator(n * param.n_delta, 0);
-				svd_solver.compute(b, Eigen::ComputeThinU | Eigen::ComputeThinV);
+				dmatrix_t b = propagator(n * param.n_delta, (n-1) * param.n_delta);
+				svd_solver.compute(b * U[n-1] * D[n-1], Eigen::ComputeThinU
+					| Eigen::ComputeThinV);
 				U[n] = svd_solver.matrixU();
 				D[n] = svd_solver.singularValues().asDiagonal();
-				V[n] = svd_solver.matrixV().adjoint();
+				V[n] = svd_solver.matrixV().adjoint() * V[n-1];
 			}
-			*/
-
+			start_backward_sweep();
 		}
 
 		void serialize(odump& out)

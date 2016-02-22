@@ -46,7 +46,7 @@ mc::mc(const std::string& dir)
 
 	//Set up measurements
 	config.measure.add_observable("M2", n_prebin);
-	config.measure.add_observable("<n1>", n_prebin);
+	config.measure.add_observable("<k>_1", n_prebin);
 	config.measure.add_vectorobservable("<n_r n_0>", config.l.max_distance() + 1,
 		n_prebin);
 
