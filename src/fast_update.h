@@ -394,6 +394,8 @@ class fast_update
 			const dmatrix_t& V_l, const dmatrix_t& U_r, const dmatrix_t& D_r,
 			const dmatrix_t& V_r)
 		{
+			//recompute_gf_matrix(U_l, D_l, V_l, U_r, D_r, V_r);
+			//return;
 			svd_solver.compute(U_r.adjoint() * U_l.adjoint() + D_r * (V_r * V_l)
 				* D_l, Eigen::ComputeThinU | Eigen::ComputeThinV);
 			dmatrix_t D = svd_solver.singularValues().unaryExpr([](double s)
@@ -432,7 +434,6 @@ class fast_update
 		{
 			double M2 = 0.;
 			// Use translational symmetry and half-filling here
-			//for (int i = 0; i < l.n_sites(); ++i)
 			int i = rng() * l.n_sites();
 			for (int j = 0; j < l.n_sites(); ++j)
 				M2 += equal_time_gf(i, j) * equal_time_gf(i, j)
