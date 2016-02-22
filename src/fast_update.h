@@ -402,6 +402,32 @@ class fast_update
 				* (svd_solver.matrixU().adjoint() * U_r.adjoint());
 		}
 
+		void recompute_gf_matrix(const dmatrix_t& U_l, const dmatrix_t& D_l,
+			const dmatrix_t& V_l, const dmatrix_t& U_r, const dmatrix_t& D_r,
+			const dmatrix_t& V_r)
+		{
+			dmatrix_t M(2 * l.n_sites(), 2 * l.n_sites());
+			M.topLeftCorner(l.n_sites(), l.n_sites()) = V_l.adjoint()
+				* V_r.adjoint();
+			M.topRightCorner(l.n_sites(), l.n_sites()) = D_l;
+			M.bottomLeftCorner(l.n_sites(), l.n_sites()) = -D_r;
+			M.bottomRightCorner(l.n_sites(), l.n_sites()) = U_r.adjoint()
+				* U_l.adjoint();
+			dmatrix_t L = dmatrix_t::Zero(2 * l.n_sites(), 2 * l.n_sites());
+			L.topLeftCorner(l.n_sites(), l.n_sites()) = V_r.adjoint();
+			L.bottomRightCorner(l.n_sites(), l.n_sites()) = U_l.adjoint();
+			dmatrix_t R = dmatrix_t::Zero(2 * l.n_sites(), 2 * l.n_sites());
+			R.topLeftCorner(l.n_sites(), l.n_sites()) = V_l.adjoint();
+			R.bottomRightCorner(l.n_sites(), l.n_sites()) = U_r.adjoint();
+
+			svd_solver.compute(M, Eigen::ComputeThinU | Eigen::ComputeThinV);
+			dmatrix_t D = svd_solver.singularValues().unaryExpr([](double s)
+				{ return 1. / s; }).asDiagonal();
+			dmatrix_t GF = (L * svd_solver.matrixV()) * D * (svd_solver.matrixU().
+				adjoint() * R);
+			equal_time_gf = GF.bottomRightCorner(l.n_sites(), l.n_sites());
+		}
+
 		double measure_M2()
 		{
 			double M2 = 0.;
