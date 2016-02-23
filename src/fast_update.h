@@ -18,7 +18,8 @@ class fast_update
 
 		fast_update(Random& rng_, const lattice& l_, const parameters& param_,
 			measurements& measure_)
-			: rng(rng_), l(l_), param(param_), measure(measure_)
+			: rng(rng_), l(l_), param(param_), measure(measure_),
+				update_time_displaced_gf(false)
 		{}
 
 		void initialize()
@@ -89,6 +90,16 @@ class fast_update
 		int get_current_vertex() const
 		{
 			return current_vertex;
+		}
+
+		void enable_time_displaced_gf()
+		{
+			update_time_displaced_gf = true;
+		}
+
+		void disable_time_displaced_gf()
+		{
+			update_time_displaced_gf = false;
 		}
 
 		void rebuild()
@@ -288,8 +299,12 @@ class fast_update
 
 		void start_forward_sweep()
 		{
-			recompute_equal_time_gf(U.front(), D.front(), V.front(), id_N, id_N,
-				id_N);
+			if (update_time_displaced_gf)
+				recompute_time_displaced_gf(U.front(), D.front(), V.front(), id_N,
+					id_N, id_N);
+			else
+				recompute_equal_time_gf(U.front(), D.front(), V.front(), id_N,
+					id_N, id_N);
 			U.front() = id_N; 
 			D.front() = id_N;
 			V.front() = id_N;
@@ -297,8 +312,12 @@ class fast_update
 
 		void start_backward_sweep()
 		{
-			recompute_equal_time_gf(id_N, id_N, id_N, U.back(), D.back(),
-				V.back());
+			if (update_time_displaced_gf)
+				recompute_time_displaced_gf(id_N, id_N, id_N, U.back(), D.back(),
+					V.back());
+			else
+				recompute_equal_time_gf(id_N, id_N, id_N, U.back(), D.back(),
+					V.back());
 			U.back() = id_N;
 			D.back() = id_N;
 			V.back() = id_N;
@@ -308,9 +327,19 @@ class fast_update
 		{
 			if (current_vertex == n_max_order)
 				return;
-			// Wrap equal time gf forwards
-			equal_time_gf = vertex_matrix(param.lambda, current_vertex + 1)
-				* equal_time_gf * vertex_matrix(-param.lambda, current_vertex + 1);
+			if (update_time_displaced_gf)
+			{
+				// Wrap time displaced gf forwards
+				time_displaced_gf = time_displaced_gf * vertex_matrix(param.lambda,
+					current_vertex + 1);
+			}
+			else
+			{
+				// Wrap equal time gf forwards
+				equal_time_gf = vertex_matrix(param.lambda, current_vertex + 1)
+					* equal_time_gf * vertex_matrix(-param.lambda, current_vertex
+					+ 1);
+			}
 			++current_vertex;
 		}
 		
@@ -318,9 +347,18 @@ class fast_update
 		{
 			if (current_vertex == 0)
 				return;
-			// Wrap equal time gf backwards
-			equal_time_gf = vertex_matrix(-param.lambda, current_vertex)
-				* equal_time_gf * vertex_matrix(param.lambda, current_vertex);
+			if (update_time_displaced_gf)
+			{
+				// Wrap time displaced gf forwards
+				time_displaced_gf = vertex_matrix(-param.lambda, current_vertex)
+					* time_displaced_gf;
+			}
+			else
+			{
+				// Wrap equal time gf backwards
+				equal_time_gf = vertex_matrix(-param.lambda, current_vertex)
+					* equal_time_gf * vertex_matrix(param.lambda, current_vertex);
+			}
 			--current_vertex;
 		}
 
@@ -339,7 +377,10 @@ class fast_update
 			U[n+1] = svd_solver.matrixU();
 			D[n+1] = svd_solver.singularValues().asDiagonal();
 			V[n+1] = svd_solver.matrixV().adjoint() * V[n];
-			recompute_equal_time_gf(U_l, D_l, V_l, U[n+1], D[n+1], V[n+1]);
+			if (update_time_displaced_gf)
+				recompute_time_displaced_gf(U_l, D_l, V_l, U[n+1], D[n+1], V[n+1]);
+			else
+				recompute_equal_time_gf(U_l, D_l, V_l, U[n+1], D[n+1], V[n+1]);
 			
 			if (current_vertex == n_max_order)
 				start_backward_sweep();
@@ -361,7 +402,10 @@ class fast_update
 			D[n-1] = svd_solver.singularValues().asDiagonal();
 			U[n-1] = svd_solver.matrixV().adjoint();
 		
-			recompute_equal_time_gf(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
+			if (update_time_displaced_gf)
+				recompute_time_displaced_gf(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
+			else
+				recompute_equal_time_gf(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
 			
 			if (current_vertex == 0)
 				start_forward_sweep();
@@ -431,15 +475,9 @@ class fast_update
 					* equal_time_gf(i, j) * equal_time_gf(i, j);
 		}
 
-		void measure_time_displaced_gf(std::vector<std::vector<double>>& gf_mesh)
+		const dmatrix_t& measure_time_displaced_gf()
 		{
-			recompute_time_displaced_gf(id_N, id_N, id_N, U.back(), D.back(),
-				V.back());
-			for (int n = n_max_order; n > 0; --n)
-			{
-				time_displaced_gf = vertex_matrix(-param.lambda, n)
-					* time_displaced_gf;
-			}
+			return time_displaced_gf;
 		}
 	private:
 		void print_matrix(const dmatrix_t& m)
@@ -459,6 +497,7 @@ class fast_update
 		int n_max_order;
 		int n_non_ident;
 		int n_intervals;
+		bool update_time_displaced_gf;
 		dmatrix_t equal_time_gf;
 		dmatrix_t time_displaced_gf;
 		dmatrix_t A; //exp(Lambda_b)
@@ -469,7 +508,6 @@ class fast_update
 		dmatrix_t invC; //(exp(-Lambda_b) - I)^-1
 		dmatrix_t id_2;
 		dmatrix_t id_N;
-		bool extended_stabilization;
 		std::vector<dmatrix_t> U;
 		std::vector<dmatrix_t> D;
 		std::vector<dmatrix_t> V;
