@@ -3,6 +3,7 @@
 #include <array>
 #include <iostream>
 #include <Eigen/Dense>
+#include "measurements.h"
 #include "dump.h"
 #include "lattice.h"
 #include "parameters.h"
@@ -15,8 +16,9 @@ class fast_update
 		using matrix_t = Eigen::Matrix<double, n, m, Eigen::ColMajor>; 
 		using dmatrix_t = matrix_t<Eigen::Dynamic, Eigen::Dynamic>;
 
-		fast_update(Random& rng_, const lattice& l_, const parameters& param_)
-			: rng(rng_), l(l_), param(param_)
+		fast_update(Random& rng_, const lattice& l_, const parameters& param_,
+			measurements& measure_)
+			: rng(rng_), l(l_), param(param_), measure(measure_)
 		{}
 
 		void initialize()
@@ -29,6 +31,7 @@ class fast_update
 			id_2 = matrix_t<2, 2>::Identity();
 			id_N = dmatrix_t::Identity(l.n_sites(), l.n_sites());
 			equal_time_gf = 0.5 * id_N; 
+			time_displaced_gf = 0.5 * id_N; 
 			dmatrix_t expLam = vertex_matrix(param.lambda);
 			dmatrix_t invExpLam = vertex_matrix(-param.lambda);
 			A = vertex_block(expLam);
@@ -309,19 +312,6 @@ class fast_update
 			equal_time_gf = vertex_matrix(param.lambda, current_vertex + 1)
 				* equal_time_gf * vertex_matrix(-param.lambda, current_vertex + 1);
 			++current_vertex;
-		
-			/*
-			dmatrix_t g = (id_N + get_R() * get_L()).inverse();
-			double diff = (equal_time_gf - g).norm();
-			if (diff > 0.001)
-			{
-				std::cout << "equal time gf:" << std::endl;
-				print_matrix(equal_time_gf);
-				std::cout << "correct" << std::endl;
-				print_matrix(g);
-				std::cout << "diff: " << (equal_time_gf - g).norm() << std::endl;
-			}
-			*/
 		}
 		
 		void advance_backward()
@@ -332,19 +322,6 @@ class fast_update
 			equal_time_gf = vertex_matrix(-param.lambda, current_vertex)
 				* equal_time_gf * vertex_matrix(param.lambda, current_vertex);
 			--current_vertex;
-
-			/*
-			dmatrix_t g = (id_N + get_R() * get_L()).inverse();
-			double diff = (equal_time_gf - g).norm();
-			if (diff > 0.001)
-			{
-				std::cout << "equal time gf:" << std::endl;
-				print_matrix(equal_time_gf);
-				std::cout << "correct" << std::endl;
-				print_matrix(g);
-				std::cout << "diff: " << (equal_time_gf - g).norm() << std::endl;
-			}
-			*/
 		}
 
 		void stabilize_forward()
@@ -394,19 +371,23 @@ class fast_update
 			const dmatrix_t& V_l, const dmatrix_t& U_r, const dmatrix_t& D_r,
 			const dmatrix_t& V_r)
 		{
-			//recompute_gf_matrix(U_l, D_l, V_l, U_r, D_r, V_r);
-			//return;
+			dmatrix_t old_gf = equal_time_gf;
 			svd_solver.compute(U_r.adjoint() * U_l.adjoint() + D_r * (V_r * V_l)
 				* D_l, Eigen::ComputeThinU | Eigen::ComputeThinV);
 			dmatrix_t D = svd_solver.singularValues().unaryExpr([](double s)
 				{ return 1. / s; }).asDiagonal();
 			equal_time_gf = (U_l.adjoint() * svd_solver.matrixV()) * D
 				* (svd_solver.matrixU().adjoint() * U_r.adjoint());
+			measure.add("norm error", (old_gf - equal_time_gf).norm());
+			measure.add("max error", (old_gf - equal_time_gf).lpNorm<Eigen::
+				Infinity>());
+			measure.add("avg error", (old_gf - equal_time_gf).lpNorm<1>()
+				/ old_gf.rows() / old_gf.cols());
 		}
-
-		void recompute_gf_matrix(const dmatrix_t& U_l, const dmatrix_t& D_l,
-			const dmatrix_t& V_l, const dmatrix_t& U_r, const dmatrix_t& D_r,
-			const dmatrix_t& V_r)
+		
+		void recompute_time_displaced_gf(const dmatrix_t& U_l,
+			const dmatrix_t& D_l, const dmatrix_t& V_l, const dmatrix_t& U_r,
+			const dmatrix_t& D_r, const dmatrix_t& V_r)
 		{
 			dmatrix_t M(2 * l.n_sites(), 2 * l.n_sites());
 			M.topLeftCorner(l.n_sites(), l.n_sites()) = V_l.adjoint()
@@ -427,7 +408,7 @@ class fast_update
 				{ return 1. / s; }).asDiagonal();
 			dmatrix_t GF = (L * svd_solver.matrixV()) * D * (svd_solver.matrixU().
 				adjoint() * R);
-			equal_time_gf = GF.bottomRightCorner(l.n_sites(), l.n_sites());
+			time_displaced_gf = GF.bottomLeftCorner(l.n_sites(), l.n_sites());
 		}
 
 		double measure_M2()
@@ -449,6 +430,17 @@ class fast_update
 				corr[l.distance(i, j)] += l.parity(i) * l.parity(j)
 					* equal_time_gf(i, j) * equal_time_gf(i, j);
 		}
+
+		void measure_time_displaced_gf(std::vector<std::vector<double>>& gf_mesh)
+		{
+			recompute_time_displaced_gf(id_N, id_N, id_N, U.back(), D.back(),
+				V.back());
+			for (int n = n_max_order; n > 0; --n)
+			{
+				time_displaced_gf = vertex_matrix(-param.lambda, n)
+					* time_displaced_gf;
+			}
+		}
 	private:
 		void print_matrix(const dmatrix_t& m)
 		{
@@ -459,6 +451,7 @@ class fast_update
 		Random& rng;
 		const lattice& l;
 		const parameters& param;
+		measurements& measure;
 		std::vector<std::pair<int, int>> lattice_bonds;
 		std::vector<int> bond_list;
 		int current_vertex;
@@ -467,6 +460,7 @@ class fast_update
 		int n_non_ident;
 		int n_intervals;
 		dmatrix_t equal_time_gf;
+		dmatrix_t time_displaced_gf;
 		dmatrix_t A; //exp(Lambda_b)
 		dmatrix_t invA; //exp(-Lambda_b)
 		dmatrix_t B; //exp(Lambda_b) - I
@@ -475,6 +469,7 @@ class fast_update
 		dmatrix_t invC; //(exp(-Lambda_b) - I)^-1
 		dmatrix_t id_2;
 		dmatrix_t id_N;
+		bool extended_stabilization;
 		std::vector<dmatrix_t> U;
 		std::vector<dmatrix_t> D;
 		std::vector<dmatrix_t> V;

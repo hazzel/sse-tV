@@ -14,12 +14,12 @@ struct configuration
 {
 	lattice l;
 	parameters param;
-	fast_update M;
 	measurements measure;
+	fast_update M;
 	std::vector<int> shellsize;
 
-	configuration(Random& rng, const greens_function& g0)
-		: l{}, param{}, M{rng, l, param}
+	configuration(Random& rng)
+		: l{}, param{}, measure{}, M{rng, l, param, measure}
 	{}
 
 	void initialize()

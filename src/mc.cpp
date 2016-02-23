@@ -6,7 +6,7 @@
 #include "event_functors.h"
 
 mc::mc(const std::string& dir)
-	: rng(Random()), qmc(rng), g0{}, config(rng, g0)
+	: rng(Random()), qmc(rng), config(rng)
 {
 	//Read parameters
 	pars.read_file(dir);
@@ -35,8 +35,6 @@ mc::mc(const std::string& dir)
 		(lattice::vertex_t i, lattice::vertex_t j) {
 		return config.l.distance(i, j) == 1; });
 
-	//Initialize configuration class
-	config.initialize();
 
 	//Set up Monte Carlo moves
 	qmc.add_move(move_update_vertex{config, rng, 1}, "update type 1",
@@ -49,6 +47,9 @@ mc::mc(const std::string& dir)
 	config.measure.add_observable("<k>_1", n_prebin);
 	config.measure.add_vectorobservable("<n_r n_0>", config.l.max_distance() + 1,
 		n_prebin);
+	config.measure.add_observable("norm error", n_prebin);
+	config.measure.add_observable("max error", n_prebin);
+	config.measure.add_observable("avg error", n_prebin);
 
 	//Measure acceptance probabilities
 	config.measure.add_observable("update type 1", n_prebin * n_cycles);
@@ -56,6 +57,9 @@ mc::mc(const std::string& dir)
 	
 	qmc.add_measure(measure_estimator{config, config.measure, pars,
 		std::vector<double>(config.l.max_distance() + 1, 0.0)}, "measurement");
+	
+	//Initialize configuration class
+	config.initialize();
 	
 	//Set up events
 	qmc.add_event(event_rebuild{config, config.measure}, "rebuild");

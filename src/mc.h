@@ -70,6 +70,5 @@ class mc
 		int n_matsubara;
 
 		honeycomb hc;
-		greens_function g0;
 		configuration config;
 };
