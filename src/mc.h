@@ -16,7 +16,6 @@
 #include "mctools.h"
 #include "honeycomb.h"
 #include "lattice.h"
-#include "greens_function.h"
 #include "configuration.h"
 
 class mc

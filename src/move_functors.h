@@ -4,7 +4,6 @@
 #include "measurements.h"
 #include "fast_update.h"
 #include "lattice.h"
-#include "greens_function.h"
 #include "configuration.h"
 #include "Random.h"
 
