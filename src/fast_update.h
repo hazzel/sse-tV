@@ -3,6 +3,7 @@
 #include <array>
 #include <iostream>
 #include <Eigen/Dense>
+#include <Eigen/QR>
 #include "measurements.h"
 #include "dump.h"
 #include "lattice.h"
@@ -41,7 +42,7 @@ class fast_update
 			invB = B.inverse();
 			C = invA - id_2;
 			invC = C.inverse();
-			max_order(20);
+			max_order(200);
 		}
 
 		void max_order(int n_max_order_)
@@ -67,7 +68,6 @@ class fast_update
 			{
 				U[n] = id_N; D[n] = id_N; V[n] = id_N;
 			}
-			rebuild();
 			std::cout << "Max order set from " << old_max_order << " to "
 				<< n_max_order << ", current order is " << n_non_ident << std::endl;
 		}
@@ -102,19 +102,36 @@ class fast_update
 			update_time_displaced_gf = false;
 		}
 
-		void rebuild()
+		void rebuild_svd()
 		{
 			U[0] = id_N; D[0] = id_N; V[0] = id_N;
 			for (int n = 1; n <= n_intervals; ++n)
 			{
 				dmatrix_t b = propagator(n * param.n_delta, (n-1) * param.n_delta);
+				// SVD
 				svd_solver.compute(b * U[n-1] * D[n-1], Eigen::ComputeThinU
 					| Eigen::ComputeThinV);
 				U[n] = svd_solver.matrixU();
 				D[n] = svd_solver.singularValues().asDiagonal();
 				V[n] = svd_solver.matrixV().adjoint() * V[n-1];
 			}
-			start_backward_sweep();
+			start_backward_sweep_svd();
+		}
+		
+		void rebuild_qr()
+		{
+			U[0] = id_N; D[0] = id_N; V[0] = id_N;
+			for (int n = 1; n <= n_intervals; ++n)
+			{
+				dmatrix_t b = propagator(n * param.n_delta, (n-1) * param.n_delta);
+				// QR
+				qr_solver.compute((b * U[n-1]) * D[n-1]);
+				U[n] = qr_solver.matrixQ();
+				D[n] = qr_solver.matrixR().diagonal();
+				V[n] = (D[n].inverse() * qr_solver.matrixR()) * (qr_solver
+					.colsPermutation().transpose() * V[n-1]);
+			}
+			start_backward_sweep_qr();
 		}
 
 		void serialize(odump& out)
@@ -297,26 +314,52 @@ class fast_update
 			}
 		}
 
-		void start_forward_sweep()
+		void start_forward_sweep_svd()
 		{
 			if (update_time_displaced_gf)
-				recompute_time_displaced_gf(U.front(), D.front(), V.front(), id_N,
-					id_N, id_N);
+				recompute_time_displaced_gf_svd(U.front(), D.front(), V.front(),
+					id_N, id_N, id_N);
 			else
-				recompute_equal_time_gf(U.front(), D.front(), V.front(), id_N,
+				recompute_equal_time_gf_svd(U.front(), D.front(), V.front(), id_N,
+					id_N, id_N);
+			U.front() = id_N; 
+			D.front() = id_N;
+			V.front() = id_N;
+		}
+		
+		void start_forward_sweep_qr()
+		{
+			if (update_time_displaced_gf)
+				recompute_time_displaced_gf_qr(U.front(), D.front(), V.front(),
+					id_N, id_N, id_N);
+			else
+				recompute_equal_time_gf_qr(U.front(), D.front(), V.front(), id_N,
 					id_N, id_N);
 			U.front() = id_N; 
 			D.front() = id_N;
 			V.front() = id_N;
 		}
 
-		void start_backward_sweep()
+		void start_backward_sweep_svd()
 		{
 			if (update_time_displaced_gf)
-				recompute_time_displaced_gf(id_N, id_N, id_N, U.back(), D.back(),
-					V.back());
+				recompute_time_displaced_gf_svd(id_N, id_N, id_N, U.back(),
+					D.back(), V.back());
 			else
-				recompute_equal_time_gf(id_N, id_N, id_N, U.back(), D.back(),
+				recompute_equal_time_gf_svd(id_N, id_N, id_N, U.back(), D.back(),
+					V.back());
+			U.back() = id_N;
+			D.back() = id_N;
+			V.back() = id_N;
+		}
+		
+		void start_backward_sweep_qr()
+		{
+			if (update_time_displaced_gf)
+				recompute_time_displaced_gf_qr(id_N, id_N, id_N, U.back(),
+					D.back(), V.back());
+			else
+				recompute_equal_time_gf_qr(id_N, id_N, id_N, U.back(), D.back(),
 					V.back());
 			U.back() = id_N;
 			D.back() = id_N;
@@ -330,15 +373,17 @@ class fast_update
 			if (update_time_displaced_gf)
 			{
 				// Wrap time displaced gf forwards
-				time_displaced_gf = time_displaced_gf * vertex_matrix(param.lambda,
-					current_vertex + 1);
+				if (bond_list[current_vertex] > 0)
+					time_displaced_gf = time_displaced_gf * vertex_matrix(
+						param.lambda, current_vertex + 1);
 			}
 			else
 			{
 				// Wrap equal time gf forwards
-				equal_time_gf = vertex_matrix(param.lambda, current_vertex + 1)
-					* equal_time_gf * vertex_matrix(-param.lambda, current_vertex
-					+ 1);
+				if (bond_list[current_vertex] > 0)
+					equal_time_gf = vertex_matrix(param.lambda, current_vertex + 1)
+						* equal_time_gf * vertex_matrix(-param.lambda,
+						current_vertex + 1);
 			}
 			++current_vertex;
 		}
@@ -350,20 +395,23 @@ class fast_update
 			if (update_time_displaced_gf)
 			{
 				// Wrap time displaced gf forwards
-				time_displaced_gf = vertex_matrix(-param.lambda, current_vertex)
-					* time_displaced_gf;
+				if (bond_list[current_vertex - 1] > 0)
+					time_displaced_gf = vertex_matrix(-param.lambda, current_vertex)
+						* time_displaced_gf;
 			}
 			else
 			{
 				// Wrap equal time gf backwards
-				equal_time_gf = vertex_matrix(-param.lambda, current_vertex)
-					* equal_time_gf * vertex_matrix(param.lambda, current_vertex);
+				if (bond_list[current_vertex - 1] > 0)
+					equal_time_gf = vertex_matrix(-param.lambda, current_vertex)
+						* equal_time_gf * vertex_matrix(param.lambda, current_vertex);
 			}
 			--current_vertex;
 		}
-
-		void stabilize_forward()
+		
+		void stabilize_forward_svd()
 		{
+			return;
 			if (current_vertex % param.n_delta != 0)
 				return;
 			// n = 0, ..., n_intervals - 1
@@ -378,16 +426,18 @@ class fast_update
 			D[n+1] = svd_solver.singularValues().asDiagonal();
 			V[n+1] = svd_solver.matrixV().adjoint() * V[n];
 			if (update_time_displaced_gf)
-				recompute_time_displaced_gf(U_l, D_l, V_l, U[n+1], D[n+1], V[n+1]);
+				recompute_time_displaced_gf_svd(U_l, D_l, V_l, U[n+1], D[n+1],
+					V[n+1]);
 			else
-				recompute_equal_time_gf(U_l, D_l, V_l, U[n+1], D[n+1], V[n+1]);
+				recompute_equal_time_gf_svd(U_l, D_l, V_l, U[n+1], D[n+1], V[n+1]);
 			
 			if (current_vertex == n_max_order)
-				start_backward_sweep();
+				start_backward_sweep_svd();
 		}
 	
-		void stabilize_backward()
+		void stabilize_backward_svd()
 		{
+			return;
 			if (current_vertex % param.n_delta != 0)
 				return;
 			//n = n_intervals, ..., 1 
@@ -403,15 +453,66 @@ class fast_update
 			U[n-1] = svd_solver.matrixV().adjoint();
 		
 			if (update_time_displaced_gf)
-				recompute_time_displaced_gf(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
+				recompute_time_displaced_gf_svd(U[n-1], D[n-1], V[n-1], U_r, D_r,
+					V_r);
 			else
-				recompute_equal_time_gf(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
+				recompute_equal_time_gf_svd(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
 			
 			if (current_vertex == 0)
-				start_forward_sweep();
+				start_forward_sweep_svd();
 		}
 
-		void recompute_equal_time_gf(const dmatrix_t& U_l, const dmatrix_t& D_l,
+		void stabilize_forward_qr()
+		{
+			if (current_vertex % param.n_delta != 0)
+				return;
+			// n = 0, ..., n_intervals - 1
+			int n = current_vertex / param.n_delta - 1;
+			dmatrix_t U_l = U[n+1];
+			dmatrix_t D_l = D[n+1];
+			dmatrix_t V_l = V[n+1];
+			dmatrix_t b = propagator((n+1) * param.n_delta, n * param.n_delta);
+			qr_solver.compute(b * U[n] * D[n]);
+			U[n+1] = qr_solver.householderQ();
+			D[n+1] = qr_solver.matrixR().diagonal();
+			V[n+1] = (D[n+1].inverse() * qr_solver.matrixR())
+				* (qr_solver.colsPermutation().transpose() * V[n]);
+			if (update_time_displaced_gf)
+				recompute_time_displaced_gf_qr(U_l, D_l, V_l, U[n+1], D[n+1],
+					V[n+1]);
+			else
+				recompute_equal_time_gf_qr(U_l, D_l, V_l, U[n+1], D[n+1], V[n+1]);
+			
+			if (current_vertex == n_max_order)
+				start_backward_sweep_qr();
+		}
+	
+		void stabilize_backward_qr()
+		{
+			if (current_vertex % param.n_delta != 0)
+				return;
+			//n = n_intervals, ..., 1 
+			int n = current_vertex / param.n_delta + 1;
+			dmatrix_t b = propagator(n * param.n_delta, (n-1) * param.n_delta);
+			qr_solver.compute(D[n] * U[n] * b);
+			dmatrix_t U_r = U[n-1];
+			dmatrix_t D_r = D[n-1];
+			dmatrix_t V_r = V[n-1];
+			V[n-1] = V[n] * qr_solver.matrixQ();
+			D[n-1] = qr_solver.matrixR().diagonal();
+			U[n-1] = (D[n-1].inverse() * qr_solver.matrixR())
+				* qr_solver.colsPermutation().transpose();
+		
+			if (update_time_displaced_gf)
+				recompute_time_displaced_gf_qr(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
+			else
+				recompute_equal_time_gf_qr(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
+			
+			if (current_vertex == 0)
+				start_forward_sweep_qr();
+		}
+
+		void recompute_equal_time_gf_svd(const dmatrix_t& U_l, const dmatrix_t& D_l,
 			const dmatrix_t& V_l, const dmatrix_t& U_r, const dmatrix_t& D_r,
 			const dmatrix_t& V_r)
 		{
@@ -429,7 +530,51 @@ class fast_update
 				/ old_gf.rows() / old_gf.cols());
 		}
 		
-		void recompute_time_displaced_gf(const dmatrix_t& U_l,
+		void recompute_time_displaced_gf_svd(const dmatrix_t& U_l,
+			const dmatrix_t& D_l, const dmatrix_t& V_l, const dmatrix_t& U_r,
+			const dmatrix_t& D_r, const dmatrix_t& V_r)
+		{
+			dmatrix_t M(2 * l.n_sites(), 2 * l.n_sites());
+			M.topLeftCorner(l.n_sites(), l.n_sites()) = V_l.adjoint()
+				* V_r.adjoint();
+			M.topRightCorner(l.n_sites(), l.n_sites()) = D_l;
+			M.bottomLeftCorner(l.n_sites(), l.n_sites()) = -D_r;
+			M.bottomRightCorner(l.n_sites(), l.n_sites()) = U_r.adjoint()
+				* U_l.adjoint();
+			dmatrix_t L = dmatrix_t::Zero(2 * l.n_sites(), 2 * l.n_sites());
+			L.topLeftCorner(l.n_sites(), l.n_sites()) = V_r.adjoint();
+			L.bottomRightCorner(l.n_sites(), l.n_sites()) = U_l.adjoint();
+			dmatrix_t R = dmatrix_t::Zero(2 * l.n_sites(), 2 * l.n_sites());
+			R.topLeftCorner(l.n_sites(), l.n_sites()) = V_l.adjoint();
+			R.bottomRightCorner(l.n_sites(), l.n_sites()) = U_r.adjoint();
+
+			svd_solver.compute(M, Eigen::ComputeThinU | Eigen::ComputeThinV);
+			dmatrix_t D = svd_solver.singularValues().unaryExpr([](double s)
+				{ return 1. / s; }).asDiagonal();
+			dmatrix_t GF = (L * svd_solver.matrixV()) * D * (svd_solver.matrixU().
+				adjoint() * R);
+			time_displaced_gf = GF.bottomLeftCorner(l.n_sites(), l.n_sites());
+		}
+		
+		void recompute_equal_time_gf_qr(const dmatrix_t& U_l,
+			const dmatrix_t& D_l, const dmatrix_t& V_l, const dmatrix_t& U_r,
+			const dmatrix_t& D_r, const dmatrix_t& V_r)
+		{
+			dmatrix_t old_gf = equal_time_gf;
+			qr_solver.compute(U_r.adjoint() * U_l.inverse() + D_r * (V_r * V_l)
+				* D_l);
+			dmatrix_t D = qr_solver.matrixR().diagonal().inverse();
+			equal_time_gf = (U_l.inverse() * (qr_solver.colsPermutation()
+				* (qr_solver.matrixR().inverse() * D))) * D
+				* (qr_solver.matrixQ().adjoint() * U_r.adjoint());
+			measure.add("norm error", (old_gf - equal_time_gf).norm());
+			measure.add("max error", (old_gf - equal_time_gf).lpNorm<Eigen::
+				Infinity>());
+			measure.add("avg error", (old_gf - equal_time_gf).lpNorm<1>()
+				/ old_gf.rows() / old_gf.cols());
+		}
+		
+		void recompute_time_displaced_gf_qr(const dmatrix_t& U_l,
 			const dmatrix_t& D_l, const dmatrix_t& V_l, const dmatrix_t& U_r,
 			const dmatrix_t& D_r, const dmatrix_t& V_r)
 		{
@@ -512,4 +657,5 @@ class fast_update
 		std::vector<dmatrix_t> D;
 		std::vector<dmatrix_t> V;
 		Eigen::JacobiSVD<dmatrix_t> svd_solver;
+		Eigen::ColPivHouseholderQR<dmatrix_t> qr_solver;
 };

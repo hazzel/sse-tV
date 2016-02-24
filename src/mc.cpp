@@ -166,13 +166,13 @@ void mc::do_update()
 			}
 		}
 		config.M.advance_backward();
-		config.M.stabilize_backward();
+		config.M.stabilize_backward_svd();
 	}
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		config.M.advance_forward();
 		qmc.do_update(config.measure);
-		config.M.stabilize_forward();
+		config.M.stabilize_forward_svd();
 		if (is_thermalized())
 		{
 			++measure_cnt;
@@ -184,11 +184,8 @@ void mc::do_update()
 		}
 	}
 	++sweep;
-	//qmc.trigger_event("rebuild");
 	if (!is_thermalized())
 		qmc.trigger_event("max_order");
-	//if (sweep % n_rebuild == 0)
-	//	qmc.trigger_event("rebuild");
 	if (sweep == n_warmup)
 		std::cout << "Max order set to " << config.M.max_order() << "."
 			<< std::endl;
