@@ -42,7 +42,7 @@ class fast_update
 			invB = B.inverse();
 			C = invA - id_2;
 			invC = C.inverse();
-			max_order(200);
+			max_order(500);
 		}
 
 		void max_order(int n_max_order_)
@@ -411,7 +411,6 @@ class fast_update
 		
 		void stabilize_forward_svd()
 		{
-			return;
 			if (current_vertex % param.n_delta != 0)
 				return;
 			// n = 0, ..., n_intervals - 1
@@ -437,7 +436,6 @@ class fast_update
 	
 		void stabilize_backward_svd()
 		{
-			return;
 			if (current_vertex % param.n_delta != 0)
 				return;
 			//n = n_intervals, ..., 1 
