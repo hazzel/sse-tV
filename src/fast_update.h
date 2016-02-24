@@ -327,19 +327,6 @@ class fast_update
 			V.front() = id_N;
 		}
 		
-		void start_forward_sweep_qr()
-		{
-			if (update_time_displaced_gf)
-				recompute_time_displaced_gf_qr(U.front(), D.front(), V.front(),
-					id_N, id_N, id_N);
-			else
-				recompute_equal_time_gf_qr(U.front(), D.front(), V.front(), id_N,
-					id_N, id_N);
-			U.front() = id_N; 
-			D.front() = id_N;
-			V.front() = id_N;
-		}
-
 		void start_backward_sweep_svd()
 		{
 			if (update_time_displaced_gf)
@@ -351,6 +338,19 @@ class fast_update
 			U.back() = id_N;
 			D.back() = id_N;
 			V.back() = id_N;
+		}
+		
+		void start_forward_sweep_qr()
+		{
+			if (update_time_displaced_gf)
+				recompute_time_displaced_gf_qr(U.front(), D.front(), V.front(),
+					id_N, id_N, id_N);
+			else
+				recompute_equal_time_gf_qr(U.front(), D.front(), V.front(), id_N,
+					id_N, id_N);
+			U.front() = id_N; 
+			D.front() = id_N;
+			V.front() = id_N;
 		}
 		
 		void start_backward_sweep_qr()
