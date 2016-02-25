@@ -16,6 +16,7 @@ class fast_update
 		template<int n, int m>
 		using matrix_t = Eigen::Matrix<double, n, m, Eigen::ColMajor>; 
 		using dmatrix_t = matrix_t<Eigen::Dynamic, Eigen::Dynamic>;
+		using sparse_t = Eigen::SparseMatrix<double, Eigen::ColMajor>;
 
 		fast_update(Random& rng_, const lattice& l_, const parameters& param_,
 			measurements& measure_)
@@ -118,7 +119,7 @@ class fast_update
 		{
 		}
 
-		dmatrix_t vertex_matrix(double lambda, int vertex_id)
+		dmatrix_t vertex_matrix_dense(double lambda, int vertex_id)
 		{
 			dmatrix_t lam = id_N; 
 			int bond_id = bond_list[vertex_id-1] - 1;
@@ -139,6 +140,45 @@ class fast_update
 				lam(bond.second, bond.first) = invA(1, 0);
 				lam(bond.second, bond.second) = invA(1, 1);
 			}
+			return lam;
+		}
+
+		sparse_t vertex_matrix(double lambda, int vertex_id)
+		{
+			using triplet_t = Eigen::Triplet<double>;
+			std::vector<triplet_t> triplet_list;
+			triplet_list.reserve(l.n_sites() + 2);
+			for (int i = 0; i < l.n_sites(); ++i)
+				triplet_list.push_back({i, i, 1.});
+			sparse_t lam(l.n_sites(), l.n_sites());
+			int bond_id = bond_list[vertex_id-1] - 1;
+			if (bond_id < 0)
+			{
+				lam.setFromTriplets(triplet_list.begin(), triplet_list.end());
+				return lam;
+			}
+			std::pair<int, int> bond = lattice_bonds[bond_id];
+			if (lambda > 0.)
+			{
+				triplet_list.push_back({bond.first, bond.second, A(0, 1)});
+				triplet_list.push_back({bond.second, bond.first, A(1, 0)});
+				for (auto& t : triplet_list)
+					if (t.row() == bond.first && t.col() == bond.first)
+						t = {bond.first, bond.first, A(0, 0)};
+					else if(t.row() == bond.second && t.col() == bond.second)
+						t = {bond.second, bond.second, A(1, 1)};
+			}
+			else
+			{
+				triplet_list.push_back({bond.first, bond.second, invA(0, 1)});
+				triplet_list.push_back({bond.second, bond.first, invA(1, 0)});
+				for (auto& t : triplet_list)
+					if (t.row() == bond.first && t.col() == bond.first)
+						t = {bond.first, bond.first, invA(0, 0)};
+					else if(t.row() == bond.second && t.col() == bond.second)
+						t = {bond.second, bond.second, invA(1, 1)};
+			}
+			lam.setFromTriplets(triplet_list.begin(), triplet_list.end());
 			return lam;
 		}
 

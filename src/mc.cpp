@@ -21,13 +21,23 @@ mc::mc(const std::string& dir)
 	config.param.beta = 1./pars.value_or_default<double>("T", 0.2);
 	config.param.t = pars.value_or_default<double>("t", 1.0);
 	config.param.V = pars.value_or_default<double>("V", 1.355);
+	if (config.param.V > 0.5)
+	{
+		config.param.V1 = 0.5;
+		config.param.V2 = config.param.V - 0.5;
+	}
+	else
+	{
+		config.param.V1 = config.param.V;
+		config.param.V2 = 0;
+	}
 	config.param.lambda = std::log((2.*config.param.t + config.param.V)
 		/ (2.*config.param.t - config.param.V));
 	config.param.n_delta = pars.value_or_default<int>("stabilization", 10);
 
 	//Proposal probabilites
-	config.param.V1 = pars.value_or_default<double>("V1", 1.0);
-	config.param.V2 = pars.value_or_default<double>("V2", 0.0);
+	config.param.prop_V1 = pars.value_or_default<double>("prop_V1", 1.0);
+	config.param.prop_V2 = pars.value_or_default<double>("prop_V2", 0.0);
 
 	//Initialize lattice
 	config.l.generate_graph(hc);
@@ -38,9 +48,9 @@ mc::mc(const std::string& dir)
 
 	//Set up Monte Carlo moves
 	qmc.add_move(move_update_vertex{config, rng, 1}, "update type 1",
-		config.param.V1);
+		config.param.prop_V1);
 	qmc.add_move(move_update_vertex{config, rng, 2}, "update type 2",
-		config.param.V2);
+		config.param.prop_V2);
 
 	//Set up measurements
 	config.measure.add_observable("M2", n_prebin);
