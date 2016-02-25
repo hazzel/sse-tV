@@ -166,13 +166,13 @@ void mc::do_update()
 			}
 		}
 		config.M.advance_backward();
-		config.M.stabilize_backward_svd();
+		config.M.stabilize_backward();
 	}
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		config.M.advance_forward();
 		qmc.do_update(config.measure);
-		config.M.stabilize_forward_svd();
+		config.M.stabilize_forward();
 		if (is_thermalized())
 		{
 			++measure_cnt;

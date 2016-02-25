@@ -3,6 +3,8 @@
 #include <algorithm>
 #include "measurements.h"
 #include "dump.h"
+#include "svd_stabilizer.h"
+#include "qr_stabilizer.h"
 #include "fast_update.h"
 #include "lattice.h"
 #include "parameters.h"
@@ -14,7 +16,7 @@ struct configuration
 	lattice l;
 	parameters param;
 	measurements measure;
-	fast_update M;
+	fast_update<qr_stabilizer> M;
 	std::vector<int> shellsize;
 
 	configuration(Random& rng)

@@ -9,7 +9,7 @@ struct event_rebuild
 
 	void trigger()
 	{
-		config.M.rebuild_qr();
+		config.M.rebuild();
 	}
 };
 
@@ -30,14 +30,8 @@ struct event_max_order
 	void trigger()
 	{
 		if (config.M.non_ident() >= 0.75 * config.M.max_order())
-		{
 			config.M.max_order(std::max(10., 4./3. * config.M.max_order()));
-			config.M.rebuild_svd();
-		}
 		else if (config.M.non_ident() <= 0.5 * config.M.max_order())
-		{
 			config.M.max_order(std::max(10., 0.8 * config.M.max_order()));
-			config.M.rebuild_svd();
-		}
 	}
 };
