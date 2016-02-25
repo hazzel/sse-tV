@@ -2,7 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <Eigen/Dense>
-#include <Eigen/SVD>
+#include <Eigen/QR>
 #include "measurements.h"
 #include "dump.h"
 #include "lattice.h"
@@ -37,20 +37,16 @@ class qr_stabilizer
 		
 		void set(int n, const dmatrix_t& b)
 		{
-			if (n == 1)
-			{
-				U.front() = id_N; D.front() = id_N; V.front() = id_N;
-			}
 			qr_solver.compute((b * U[n-1]) * D[n-1]);
 			U[n] = qr_solver.matrixQ();
-			D[n] = qr_solver.matrixR().diagonal().asDiagonal();
-			V[n] = (D[n].inverse() * qr_solver.matrixR().triangularView<Eigen
+			D[n] = qr_solver.matrixQR().diagonal().asDiagonal();
+			V[n] = (D[n].inverse() * qr_solver.matrixQR().triangularView<Eigen
 				::Upper>()) * (qr_solver.colsPermutation().transpose() * V[n-1]);
 			if (n == n_intervals)
 			{
-				U.back() = id_N; D.back() = id_N; V.back() = id_N;
 				recompute_equal_time_gf(id_N, id_N, id_N, U.back(),
 					D.back(), V.back());
+				U.back() = id_N; D.back() = id_N; V.back() = id_N;
 			}
 		}
 		
@@ -62,11 +58,11 @@ class qr_stabilizer
 				U.front() = id_N; D.front() = id_N; V.front() = id_N;
 			}
 			
-			qr_solver.compute(b * U[n] * D[n]);
+			qr_solver.compute((b * U[n]) * D[n]);
 			U_l = U[n+1]; D_l = D[n+1]; V_l = V[n+1];
 			U[n+1] = qr_solver.matrixQ();
-			D[n+1] = qr_solver.matrixR().diagonal().asDiagonal();
-			V[n+1] = (D[n+1].inverse() * qr_solver.matrixR().triangularView<Eigen
+			D[n+1] = qr_solver.matrixQR().diagonal().asDiagonal();
+			V[n+1] = (D[n+1].inverse() * qr_solver.matrixQR().triangularView<Eigen
 				::Upper>()) * (qr_solver.colsPermutation().transpose() * V[n]);
 			
 			if (update_time_displaced_gf)
@@ -84,11 +80,11 @@ class qr_stabilizer
 				U.back() = id_N; D.back() = id_N; V.back() = id_N;
 			}
 			
-			qr_solver.compute(D[n] * U[n] * b);
+			qr_solver.compute(D[n] * (U[n] * b));
 			U_r = U[n-1]; D_r = D[n-1]; V_r = V[n-1];
 			V[n-1] = V[n] * qr_solver.matrixQ();
-			D[n-1] = qr_solver.matrixR().diagonal().asDiagonal();
-			U[n-1] = (D[n-1].inverse() * qr_solver.matrixR().triangularView<Eigen
+			D[n-1] = qr_solver.matrixQR().diagonal().asDiagonal();
+			U[n-1] = (D[n-1].inverse() * qr_solver.matrixQR().triangularView<Eigen
 				::Upper>()) * qr_solver.colsPermutation().transpose();
 		
 			if (update_time_displaced_gf)
@@ -103,13 +99,15 @@ class qr_stabilizer
 			const dmatrix_t& V_r_)
 		{
 			dmatrix_t old_gf = equal_time_gf;
-			qr_solver.compute(U_r_.adjoint() * U_l_.inverse() + D_r_ * (V_r_
+			qr_solver.compute(U_r_.transpose() * U_l_.inverse() + D_r_ * (V_r_
 				* V_l_) * D_l_);
-			dmatrix_t D = qr_solver.matrixR().diagonal().asDiagonal();
-			dmatrix_t r = qr_solver.matrixR().triangularView<Eigen::Upper>();
+			dmatrix_t r = qr_solver.matrixQR().triangularView<Eigen::Upper>();
+			dmatrix_t D = qr_solver.matrixQR().diagonal().asDiagonal();
 			equal_time_gf = (U_l_.inverse() * (qr_solver.colsPermutation()
-				* (r.inverse() * D))) * D.inverse() * (qr_solver.matrixQ().adjoint()
-				* U_r_.adjoint());
+				* r.inverse())) * (qr_solver.matrixQ().transpose()
+				* U_r_.transpose());
+//			if ((old_gf - equal_time_gf).norm() > 0.00001)
+//				std::cout << (old_gf - equal_time_gf).norm() << std::endl;
 			measure.add("norm error", (old_gf - equal_time_gf).norm());
 			measure.add("max error", (old_gf - equal_time_gf).lpNorm<Eigen::
 				Infinity>());

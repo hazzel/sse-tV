@@ -2,7 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <Eigen/Dense>
-#include <Eigen/QR>
+#include <Eigen/Sparse>
 #include "measurements.h"
 #include "dump.h"
 #include "lattice.h"
@@ -55,7 +55,9 @@ class fast_update
 				n_max_order += param.n_delta - n_max_order_ % param.n_delta;
 			current_vertex = n_max_order;
 			n_intervals = n_max_order / param.n_delta;
-			if (old_max_order < n_max_order)
+			if (old_max_order == n_max_order)
+				return;
+			else if (old_max_order < n_max_order)
 				bond_list.resize(n_max_order, 0);
 			else
 			{

@@ -37,10 +37,6 @@ class svd_stabilizer
 		
 		void set(int n, const dmatrix_t& b)
 		{
-			if (n == 1)
-			{
-				U.front() = id_N; D.front() = id_N; V.front() = id_N;
-			}
 			svd_solver.compute(b * U[n-1] * D[n-1], Eigen::ComputeThinU
 				| Eigen::ComputeThinV);
 			U[n] = svd_solver.matrixU();
@@ -48,9 +44,9 @@ class svd_stabilizer
 			V[n] = svd_solver.matrixV().adjoint() * V[n-1];
 			if (n == n_intervals)
 			{
-				U.back() = id_N; D.back() = id_N; V.back() = id_N;
 				recompute_time_displaced_gf(id_N, id_N, id_N, U.back(),
 					D.back(), V.back());
+				U.back() = id_N; D.back() = id_N; V.back() = id_N;
 			}
 		}
 		
