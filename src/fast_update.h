@@ -42,8 +42,8 @@ class fast_update
 			A.resize(4, dmatrix_t(2, 2));
 			A[0] << std::cosh(param.lambda), std::sinh(param.lambda),
 				std::sinh(param.lambda), std::cosh(param.lambda);
-			A[1] << std::cosh(param.lambda), std::sinh(-param.lambda),
-				std::sinh(-param.lambda), std::cosh(param.lambda);
+			A[1] << std::cosh(param.lambda), -std::sinh(param.lambda),
+				-std::sinh(param.lambda), std::cosh(param.lambda);
 			A[2] << -1., 0., 0., -1;
 			A[3] = A[2];
 
@@ -62,15 +62,15 @@ class fast_update
 			}
 			
 			build_vertex_matrices();
-		max_order(5000);
-	}
+			max_order(5000);
+		}
 
-	void build_vertex_matrices()
-	{
-		vertex_matrices.resize(3. * l.n_bonds() + 1);
-		vertex_matrices[0] = sparse_t(l.n_sites(), l.n_sites());
-		vertex_matrices[0].setIdentity();
-		for (int type = 0; type < 3; ++type)
+		void build_vertex_matrices()
+		{
+			vertex_matrices.resize(3. * l.n_bonds() + 1);
+			vertex_matrices[0] = sparse_t(l.n_sites(), l.n_sites());
+			vertex_matrices[0].setIdentity();
+			for (int type = 0; type < 3; ++type)
 				for (int i = 1; i <= l.n_bonds(); ++i)
 					vertex_matrices[type*l.n_bonds() + i] =
 						create_sparse_vertex_matrix(type, i);
@@ -148,20 +148,6 @@ class fast_update
 		{
 		}
 
-		dmatrix_t create_dense_vertex_matrix(int type, int vertex_id)
-		{
-			dmatrix_t lam = id_N; 
-			int bond_id = bond_list[vertex_id-1] - 1;
-			if (bond_id < 0)
-				return lam;
-			std::pair<int, int> bond = lattice_bonds[bond_id];
-			lam(bond.first, bond.first) = A[type](0, 0);
-			lam(bond.first, bond.second) = A[type](0, 1);
-			lam(bond.second, bond.first) = A[type](1, 0);
-			lam(bond.second, bond.second) = A[type](1, 1);
-			return lam;
-		}
-		
 		sparse_t create_sparse_vertex_matrix(int type, int bond_id)
 		{
 			using triplet_t = Eigen::Triplet<double>;
@@ -176,7 +162,7 @@ class fast_update
 				lam.setFromTriplets(triplet_list.begin(), triplet_list.end());
 				return lam;
 			}
-			std::pair<int, int> bond = lattice_bonds[bond_id];
+			auto& bond = lattice_bonds[bond_id];
 			triplet_list.push_back({bond.first, bond.second, A[type](0, 1)});
 			triplet_list.push_back({bond.second, bond.first, A[type](1, 0)});
 			for (auto& t : triplet_list)
@@ -186,6 +172,18 @@ class fast_update
 					t = {bond.second, bond.second, A[type](1, 1)};
 			lam.setFromTriplets(triplet_list.begin(), triplet_list.end());
 			return lam;
+		}
+		
+		sparse_t create_sparse_from_block(const std::pair<int, int>& bond,
+			const dmatrix_t& m)
+		{
+			using triplet_t = Eigen::Triplet<double>;
+			std::vector<triplet_t> triplet_list = {{bond.first, bond.first,
+				m(0, 0)}, {bond.first, bond.second, m(0, 1)}, {bond.second,
+				bond.first, m(1, 0)}, {bond.second, bond.second, m(1, 1)}};
+			sparse_t s(l.n_sites(), l.n_sites());
+			s.setFromTriplets(triplet_list.begin(), triplet_list.end());
+			return s;
 		}
 
 		const sparse_t& vertex_matrix(int type, int vertex_id)
@@ -201,7 +199,7 @@ class fast_update
 		dmatrix_t vertex_matrix(double lambda)
 		{
 			dmatrix_t lam = dmatrix_t::Zero(l.n_sites(), l.n_sites());
-			std::pair<int, int> bond = lattice_bonds[0];
+			auto& bond = lattice_bonds[0];
 			lam(bond.first, bond.second) = lambda;
 			lam(bond.second, bond.first) = lambda;
 			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(lam);
@@ -215,7 +213,7 @@ class fast_update
 			int bond_id = bond_list[vertex_id-1] - 1;
 			if (bond_id < 0)
 				return id_2; 
-			std::pair<int, int> bond = lattice_bonds[bond_id];
+			auto& bond = lattice_bonds[bond_id];
 			matrix_t<2, 2> block;
 			block << m(bond.first, bond.first), m(bond.first, bond.second),
 				m(bond.second, bond.first), m(bond.second, bond.second);
@@ -233,7 +231,7 @@ class fast_update
 
 		matrix_t<2, 2> vertex_block(const dmatrix_t& m)
 		{
-			std::pair<int, int> bond = lattice_bonds[0];
+			auto& bond = lattice_bonds[0];
 			matrix_t<2, 2> block(2, 2);
 			block << m(bond.first, bond.first), m(bond.first, bond.second),
 				m(bond.second, bond.first), m(bond.second, bond.second);
@@ -290,7 +288,7 @@ class fast_update
 			{
 				int bond_id = (rng() + bond_type) * l.n_bonds();
 				bond_buffer = bond_id + 1;
-				std::pair<int, int> bond = lattice_bonds[bond_id];
+				auto& bond = lattice_bonds[bond_id];
 				matrix_t<2, 2> d = id_2 + B[2*bond_type] * (id_2 - vertex_block(
 					equal_time_gf, bond));
 				if (bond_type == 0)
@@ -327,33 +325,23 @@ class fast_update
 			{
 				int bond_id = bond_buffer - 1;
 				bond_list[current_vertex-1] = bond_buffer;
-				std::pair<int, int> bond = lattice_bonds[bond_id];
+				auto& bond = lattice_bonds[bond_id];
 				matrix_t<2, 2> d = (B[2*bond_type+1] + (id_2 - vertex_block(
 					equal_time_gf, bond))).inverse();
-				dmatrix_t e = dmatrix_t::Zero(l.n_sites(), l.n_sites());
-				e(bond.first, bond.first) = d(0, 0);
-				e(bond.first, bond.second) = d(0, 1);
-				e(bond.second, bond.first) = d(1, 0);
-				e(bond.second, bond.second) = d(1, 1);
-				equal_time_gf = equal_time_gf - (equal_time_gf * e * (id_N
-					- equal_time_gf));
+				equal_time_gf = equal_time_gf - (equal_time_gf
+					* create_sparse_from_block(bond, d)	* (id_N - equal_time_gf));
 				++n_non_ident[bond_type];
 			}
 			// Remove bond at vertex
 			else
 			{
-				int bond_id = bond_list[current_vertex-1] - 1;
+				int bond_id = bond_list[current_vertex-1];
 				bond_list[current_vertex-1] = 0;
-				std::pair<int, int> bond = lattice_bonds[bond_id];
+				auto& bond = lattice_bonds[bond_id];
 				matrix_t<2, 2> d = (C[2*bond_type+1] + (id_2 - vertex_block(
 					equal_time_gf, bond))).inverse();
-				dmatrix_t e = dmatrix_t::Zero(l.n_sites(), l.n_sites());
-				e(bond.first, bond.first) = d(0, 0);
-				e(bond.first, bond.second) = d(0, 1);
-				e(bond.second, bond.first) = d(1, 0);
-				e(bond.second, bond.second) = d(1, 1);
-				equal_time_gf = equal_time_gf - (equal_time_gf * e * (id_N
-					- equal_time_gf));
+				equal_time_gf = equal_time_gf - (equal_time_gf
+					* create_sparse_from_block(bond, d)  * (id_N - equal_time_gf));
 				--n_non_ident[bond_type];
 			}
 		}

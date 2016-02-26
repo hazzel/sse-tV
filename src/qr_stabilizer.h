@@ -44,8 +44,8 @@ class qr_stabilizer
 				::Upper>()) * (qr_solver.colsPermutation().transpose() * V[n-1]);
 			if (n == n_intervals)
 			{
-				recompute_equal_time_gf(id_N, id_N, id_N, U.back(),
-					D.back(), V.back());
+				recompute_equal_time_gf(id_N, id_N, id_N, U.back(), D.back(),
+					V.back());
 				U.back() = id_N; D.back() = id_N; V.back() = id_N;
 			}
 		}
