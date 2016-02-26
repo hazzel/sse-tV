@@ -13,7 +13,7 @@ class qr_stabilizer
 {
 	public:
 		template<int n, int m>
-		using matrix_t = Eigen::Matrix<double, n, m, Eigen::ColMajor>; 
+		using matrix_t = Eigen::Matrix<double, n, m>; 
 		using dmatrix_t = matrix_t<Eigen::Dynamic, Eigen::Dynamic>;
 		
 		qr_stabilizer(measurements& measure_, dmatrix_t& equal_time_gf_,

@@ -16,7 +16,8 @@ struct measure_estimator
 	void perform()
 	{
 		measure.add("M2", config.M.measure_M2());
-		measure.add("<k>_1", config.M.non_ident());
+		measure.add("<k>_1", config.M.non_ident(0));
+		measure.add("<k>_2", config.M.non_ident(1));
 		std::fill(density_Corr.begin(), density_Corr.end(), 0.0);
 		config.M.measure_density_correlations(density_Corr);
 		for (int i = 0; i < density_Corr.size(); ++i)

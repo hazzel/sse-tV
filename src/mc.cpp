@@ -31,8 +31,8 @@ mc::mc(const std::string& dir)
 		config.param.V1 = config.param.V;
 		config.param.V2 = 0;
 	}
-	config.param.lambda = std::log((2.*config.param.t + config.param.V)
-		/ (2.*config.param.t - config.param.V));
+	config.param.lambda = std::log((2.*config.param.t + config.param.V1)
+		/ (2.*config.param.t - config.param.V1));
 	config.param.n_delta = pars.value_or_default<int>("stabilization", 10);
 
 	//Proposal probabilites
@@ -47,14 +47,15 @@ mc::mc(const std::string& dir)
 
 
 	//Set up Monte Carlo moves
-	qmc.add_move(move_update_vertex{config, rng, 1}, "update type 1",
+	qmc.add_move(move_update_vertex{config, rng, 0}, "update type 0",
 		config.param.prop_V1);
-	qmc.add_move(move_update_vertex{config, rng, 2}, "update type 2",
+	qmc.add_move(move_update_vertex{config, rng, 1}, "update type 1",
 		config.param.prop_V2);
 
 	//Set up measurements
 	config.measure.add_observable("M2", n_prebin);
 	config.measure.add_observable("<k>_1", n_prebin);
+	config.measure.add_observable("<k>_2", n_prebin);
 	config.measure.add_vectorobservable("<n_r n_0>", config.l.max_distance() + 1,
 		n_prebin);
 	config.measure.add_observable("norm error", n_prebin);
@@ -62,6 +63,7 @@ mc::mc(const std::string& dir)
 	config.measure.add_observable("avg error", n_prebin);
 
 	//Measure acceptance probabilities
+	config.measure.add_observable("update type 0", n_prebin * n_cycles);
 	config.measure.add_observable("update type 1", n_prebin * n_cycles);
 	config.measure.add_observable("sign", n_prebin * n_cycles);
 	
@@ -194,8 +196,8 @@ void mc::do_update()
 		}
 	}
 	++sweep;
-	if (!is_thermalized())
-		qmc.trigger_event("max_order");
+//	if (!is_thermalized())
+//		qmc.trigger_event("max_order");
 	if (sweep == n_warmup)
 		std::cout << "Max order set to " << config.M.max_order() << "."
 			<< std::endl;
