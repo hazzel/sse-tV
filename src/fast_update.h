@@ -335,7 +335,7 @@ class fast_update
 			// Remove bond at vertex
 			else
 			{
-				int bond_id = bond_list[current_vertex-1];
+				int bond_id = bond_list[current_vertex-1] - 1;
 				bond_list[current_vertex-1] = 0;
 				auto& bond = lattice_bonds[bond_id];
 				matrix_t<2, 2> d = (C[2*bond_type+1] + (id_2 - vertex_block(
