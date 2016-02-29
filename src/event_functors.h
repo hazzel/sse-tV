@@ -29,11 +29,11 @@ struct event_max_order
 
 	void trigger()
 	{
-		if (config.M.non_ident(0)+config.M.non_ident(1) >= 0.75
-			* config.M.max_order())
-			config.M.max_order(std::max(10., 4./3. * config.M.max_order()));
-		else if (config.M.non_ident(0) + config.M.non_ident(1) <= 0.5
-			* config.M.max_order())
-			config.M.max_order(std::max(10., 0.8 * config.M.max_order()));
+//		if (config.M.non_ident(0)+config.M.non_ident(1) >= 0.75
+//			* config.M.max_order())
+//			config.M.max_order(std::max(10., 4./3. * config.M.max_order()));
+//		else if (config.M.non_ident(0) + config.M.non_ident(1) <= 0.5
+//			* config.M.max_order())
+//			config.M.max_order(std::max(10., 0.8 * config.M.max_order()));
 	}
 };

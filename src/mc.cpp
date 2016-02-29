@@ -21,6 +21,7 @@ mc::mc(const std::string& dir)
 	config.param.beta = 1./pars.value_or_default<double>("T", 0.2);
 	config.param.t = pars.value_or_default<double>("t", 1.0);
 	config.param.V = pars.value_or_default<double>("V", 1.355);
+	/*
 	if (config.param.V > 0.5)
 	{
 		config.param.V1 = 0.5;
@@ -31,6 +32,8 @@ mc::mc(const std::string& dir)
 		config.param.V1 = config.param.V;
 		config.param.V2 = 0;
 	}
+	*/
+	config.param.V1 = config.param.V;
 	config.param.lambda = std::log((2.*config.param.t + config.param.V1)
 		/ (2.*config.param.t - config.param.V1));
 	config.param.n_delta = pars.value_or_default<int>("stabilization", 10);
@@ -56,6 +59,7 @@ mc::mc(const std::string& dir)
 	config.measure.add_observable("M2", n_prebin);
 	config.measure.add_observable("<k>_1", n_prebin);
 	config.measure.add_observable("<k>_2", n_prebin);
+	config.measure.add_observable("energy", n_prebin);
 	config.measure.add_vectorobservable("<n_r n_0>", config.l.max_distance() + 1,
 		n_prebin);
 	config.measure.add_observable("norm error", n_prebin);
@@ -179,6 +183,8 @@ void mc::do_update()
 		}
 		config.M.advance_backward();
 		config.M.stabilize_backward();
+//		std::cout << config.M.non_ident(0) << ", " << config.M.non_ident(1)
+//			<< std::endl;
 	}
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
@@ -196,8 +202,8 @@ void mc::do_update()
 		}
 	}
 	++sweep;
-//	if (!is_thermalized())
-//		qmc.trigger_event("max_order");
+	if (!is_thermalized())
+		qmc.trigger_event("max_order");
 	if (sweep == n_warmup)
 		std::cout << "Max order set to " << config.M.max_order() << "."
 			<< std::endl;
@@ -208,12 +214,4 @@ void mc::do_measurement()
 {}
 
 void mc::status()
-{
-//	if (sweep == n_warmup)
-//		std::cout << "Thermalization done." << std::endl;
-//	if (is_thermalized() && sweep % (10000) == 0)
-//	{
-//		std::cout << "sweep: " << sweep << std::endl;
-//		std::cout << "pert order: " << config.perturbation_order() << std::endl;
-//	}
-}
+{}

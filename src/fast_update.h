@@ -99,6 +99,7 @@ class fast_update
 			std::cout << "Max order set from " << old_max_order << " to "
 				<< n_max_order << ", current order is: n_1 = " << n_non_ident[0]
 				<< ", n_2 = " << n_non_ident[1] << "." << std::endl;
+			std::cout << "bond list size " << bond_list.size() << std::endl;
 		}
 
 		int max_order() const
@@ -156,7 +157,7 @@ class fast_update
 			for (int i = 0; i < l.n_sites(); ++i)
 				triplet_list.push_back({i, i, 1.});
 			sparse_t lam(l.n_sites(), l.n_sites());
-			bond_id -= 1;
+			--bond_id;
 			if (bond_id < 0)
 			{
 				lam.setFromTriplets(triplet_list.begin(), triplet_list.end());
@@ -196,18 +197,6 @@ class fast_update
 				return vertex_matrices[type * l.n_bonds() + bond_list[vertex_id-1]];
 		}
 
-		dmatrix_t vertex_matrix(double lambda)
-		{
-			dmatrix_t lam = dmatrix_t::Zero(l.n_sites(), l.n_sites());
-			auto& bond = lattice_bonds[0];
-			lam(bond.first, bond.second) = lambda;
-			lam(bond.second, bond.first) = lambda;
-			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(lam);
-			dmatrix_t d = solver.eigenvalues().unaryExpr([](double e)
-				{ return std::exp(e); }).asDiagonal();
-			return solver.eigenvectors() * d * solver.eigenvectors().adjoint();
-		}
-		
 		matrix_t<2, 2> vertex_block(const dmatrix_t& m, int vertex_id)
 		{
 			int bond_id = bond_list[vertex_id-1] - 1;
@@ -229,37 +218,6 @@ class fast_update
 			return block;
 		}
 
-		matrix_t<2, 2> vertex_block(const dmatrix_t& m)
-		{
-			auto& bond = lattice_bonds[0];
-			matrix_t<2, 2> block(2, 2);
-			block << m(bond.first, bond.first), m(bond.first, bond.second),
-				m(bond.second, bond.first), m(bond.second, bond.second);
-			return block;
-		}
-
-		dmatrix_t get_R()
-		{
-			dmatrix_t R = id_N; 
-			for (int n = current_vertex; n >= 1; --n)
-			{
-				if (bond_list[n-1] == 0) continue;
-				R *= vertex_matrix(0, n);
-			}
-			return R;
-		}
-		
-		dmatrix_t get_L()
-		{
-			dmatrix_t L = id_N; 
-			for (int n = n_max_order; n > current_vertex; --n)
-			{
-				if (bond_list[n-1] == 0) continue;
-				L *= vertex_matrix(0, n);
-			}
-			return L;
-		}
-		
 		dmatrix_t propagator(int n, int m)
 		{
 			dmatrix_t P = id_N; 
@@ -291,13 +249,15 @@ class fast_update
 				auto& bond = lattice_bonds[bond_id];
 				matrix_t<2, 2> d = id_2 + B[2*bond_type] * (id_2 - vertex_block(
 					equal_time_gf, bond));
+				// Insert V1 vertex
 				if (bond_type == 0)
 					return d.determinant() * l.n_bonds() * param.beta * param.t
-						/ ((n_max_order - n_non_ident[bond_type])
+						/ ((n_max_order - n_non_ident[0] - n_non_ident[1])
 						* std::sinh(param.lambda));
+				// Insert V2 vertex
 				else
-					return -d.determinant() * l.n_bonds() * param.beta * param.V2/4.
-						/ ((n_max_order - n_non_ident[bond_type]));
+					return d.determinant() * l.n_bonds() * param.beta * param.V2/4.
+						/ ((n_max_order - n_non_ident[0] - n_non_ident[1]));
 			}
 			// Remove bond at vertex
 			else if ((bond_type == 0 && get_current_bond() <= l.n_bonds()) ||
@@ -306,13 +266,16 @@ class fast_update
 				bond_buffer = 0;
 				matrix_t<2, 2> d = id_2 + C[2*bond_type] * (id_2 - vertex_block(
 					equal_time_gf, current_vertex));
+				// Insert V1 vertex
 				if (bond_type == 0)
-					return d.determinant() * ((n_max_order - n_non_ident[bond_type]
-						+ 1.) * std::sinh(param.lambda)) / (l.n_bonds() * param.beta
-						* param.t);
+					return d.determinant() * ((n_max_order - n_non_ident[0]
+						- n_non_ident[1] + 1.) * std::sinh(param.lambda))
+						/ (l.n_bonds() * param.beta * param.t);
+				// Insert V2 vertex
 				else
-					return -d.determinant() * ((n_max_order - n_non_ident[bond_type]
-						+ 1.)) / (l.n_bonds() * param.beta * param.V2 / 4.);
+					return d.determinant() * ((n_max_order - n_non_ident[0]
+						- n_non_ident[1] + 1.)) / (l.n_bonds() * param.beta
+						* param.V2 / 4.);
 			}
 			else
 				return 0.;
