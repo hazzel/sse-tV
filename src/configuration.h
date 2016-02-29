@@ -23,7 +23,7 @@ struct configuration
 		: l{}, param{}, measure{}, M{rng, l, param, measure}
 	{}
 
-	void initialize()
+	void initialize(int max_order)
 	{
 		shellsize.resize(l.max_distance() + 1, 0);
 		for (int d = 0; d <= l.max_distance(); ++d)
@@ -33,7 +33,7 @@ struct configuration
 				if (l.distance(site, j) == d)
 					shellsize[d] += 1;
 		}
-		M.initialize();
+		M.initialize(max_order);
 	}
 
 	void serialize(odump& out)

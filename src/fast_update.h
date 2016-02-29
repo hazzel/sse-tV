@@ -27,7 +27,7 @@ class fast_update
 				stabilizer{measure, equal_time_gf, time_displaced_gf}
 		{}
 
-		void initialize()
+		void initialize(int max_order_)
 		{
 			for (int bond_type = 0; bond_type < 2; ++bond_type)
 				for (int i = 0; i < l.n_sites(); ++i)
@@ -62,7 +62,7 @@ class fast_update
 			}
 			
 			build_vertex_matrices();
-			max_order(5000);
+			max_order(max_order_);
 		}
 
 		void build_vertex_matrices()
@@ -94,6 +94,13 @@ class fast_update
 					bond_list.end());
 				bond_list.resize(n_max_order, 0);
 			}
+			for (auto& i : n_non_ident)
+				i = 0;
+			for (auto i : bond_list)
+				if (i > 0 && i <= l.n_bonds())
+					++n_non_ident[0];
+				else if(i > l.n_bonds())
+					++n_non_ident[1];
 			stabilizer.resize(n_intervals, l.n_sites());
 			rebuild();
 			std::cout << "Max order set from " << old_max_order << " to "
@@ -244,9 +251,8 @@ class fast_update
 			// Insert bond at vertex
 			if (get_current_bond() == 0)
 			{
-				int bond_id = (rng() + bond_type) * l.n_bonds();
-				bond_buffer = bond_id + 1;
-				auto& bond = lattice_bonds[bond_id];
+				bond_buffer = (rng() + bond_type) * l.n_bonds() + 1;
+				auto& bond = lattice_bonds[bond_buffer - 1];
 				matrix_t<2, 2> d = id_2 + B[2*bond_type] * (id_2 - vertex_block(
 					equal_time_gf, bond));
 				// Insert V1 vertex

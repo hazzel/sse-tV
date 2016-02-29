@@ -21,7 +21,6 @@ mc::mc(const std::string& dir)
 	config.param.beta = 1./pars.value_or_default<double>("T", 0.2);
 	config.param.t = pars.value_or_default<double>("t", 1.0);
 	config.param.V = pars.value_or_default<double>("V", 1.355);
-	/*
 	if (config.param.V > 0.5)
 	{
 		config.param.V1 = 0.5;
@@ -32,11 +31,10 @@ mc::mc(const std::string& dir)
 		config.param.V1 = config.param.V;
 		config.param.V2 = 0;
 	}
-	*/
-	config.param.V1 = config.param.V;
 	config.param.lambda = std::log((2.*config.param.t + config.param.V1)
 		/ (2.*config.param.t - config.param.V1));
 	config.param.n_delta = pars.value_or_default<int>("stabilization", 10);
+	int max_order = pars.value_or_default<int>("max_order", 5000);
 
 	//Proposal probabilites
 	config.param.prop_V1 = pars.value_or_default<double>("prop_V1", 1.0);
@@ -75,7 +73,7 @@ mc::mc(const std::string& dir)
 		std::vector<double>(config.l.max_distance() + 1, 0.0)}, "measurement");
 	
 	//Initialize configuration class
-	config.initialize();
+	config.initialize(max_order);
 	
 	//Set up events
 	qmc.add_event(event_rebuild{config, config.measure}, "rebuild");
