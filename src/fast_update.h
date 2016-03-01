@@ -48,19 +48,20 @@ class fast_update
 			A[3] = A[2];
 
 			B.resize(4, dmatrix_t(2, 2));
-			for (int i = 0; i < B.size()/2; i+=2)
+			for (int i = 0; i < B.size()/2; ++i)
 			{
 				B[2*i] = A[2*i] - id_2;
 				B[2*i+1] = B[2*i].inverse();
+				print_matrix(B[2*i+1]);
 			}
 			
 			C.resize(4, dmatrix_t(2, 2));
-			for (int i = 0; i < C.size()/2; i+=2)
+			for (int i = 0; i < C.size()/2; ++i)
 			{
 				C[2*i] = A[2*i+1] - id_2;
 				C[2*i+1] = C[2*i].inverse();
 			}
-			
+
 			build_vertex_matrices();
 			max_order(max_order_);
 		}
@@ -236,6 +237,12 @@ class fast_update
 			return P;
 		}
 
+		dmatrix_t gf_from_scratch()
+		{
+			return (id_N + propagator(current_vertex, 0) * propagator(n_max_order,
+				current_vertex)).inverse();
+		}
+
 		void print_bonds()
 		{
 			std::cout << "print_bonds()" << std::endl;
@@ -262,7 +269,7 @@ class fast_update
 						* std::sinh(param.lambda));
 				// Insert V2 vertex
 				else
-					return d.determinant() * l.n_bonds() * param.beta * param.V2/4.
+					return -d.determinant() * l.n_bonds() * param.beta * param.V2/4.
 						/ ((n_max_order - n_non_ident[0] - n_non_ident[1]));
 			}
 			// Remove bond at vertex
@@ -279,7 +286,7 @@ class fast_update
 						/ (l.n_bonds() * param.beta * param.t);
 				// Insert V2 vertex
 				else
-					return d.determinant() * ((n_max_order - n_non_ident[0]
+					return -d.determinant() * ((n_max_order - n_non_ident[0]
 						- n_non_ident[1] + 1.)) / (l.n_bonds() * param.beta
 						* param.V2 / 4.);
 			}
@@ -289,30 +296,43 @@ class fast_update
 
 		void finish_update_vertex(int bond_type)
 		{
+			std::pair<int, int> bond;
+			matrix_t<2, 2> denom;
 			// Insert bond at vertex
 			if (get_current_bond() == 0)
 			{
-				int bond_id = bond_buffer - 1;
+				bond = lattice_bonds[bond_buffer - 1];
 				bond_list[current_vertex-1] = bond_buffer;
-				auto& bond = lattice_bonds[bond_id];
-				matrix_t<2, 2> d = (B[2*bond_type+1] + (id_2 - vertex_block(
-					equal_time_gf, bond))).inverse();
-				equal_time_gf = equal_time_gf - (equal_time_gf
-					* create_sparse_from_block(bond, d)	* (id_N - equal_time_gf));
+				denom = (B[2*bond_type+1] + (id_2 - vertex_block(equal_time_gf,
+					bond))).inverse();
 				++n_non_ident[bond_type];
 			}
 			// Remove bond at vertex
 			else
 			{
-				int bond_id = bond_list[current_vertex-1] - 1;
+				bond = lattice_bonds[bond_list[current_vertex-1] - 1];
 				bond_list[current_vertex-1] = 0;
-				auto& bond = lattice_bonds[bond_id];
-				matrix_t<2, 2> d = (C[2*bond_type+1] + (id_2 - vertex_block(
-					equal_time_gf, bond))).inverse();
-				equal_time_gf = equal_time_gf - (equal_time_gf
-					* create_sparse_from_block(bond, d)  * (id_N - equal_time_gf));
+				denom = (C[2*bond_type+1] + (id_2 - vertex_block(equal_time_gf,
+					bond))).inverse();
 				--n_non_ident[bond_type];
 			}
+			dmatrix_t GP(l.n_sites(), 2);
+			GP.col(0) = equal_time_gf.col(bond.first);
+			GP.col(1) = equal_time_gf.col(bond.second);
+			dmatrix_t PIG(2, l.n_sites());
+			PIG.row(0) = -equal_time_gf.row(bond.first);
+			PIG(0, bond.first) += 1.;
+			PIG.row(1) = -equal_time_gf.row(bond.second);
+			PIG(1, bond.second) += 1.;
+			equal_time_gf.noalias() -= GP * denom * PIG;
+
+			std::cout << "inserted bond_type " << bond_type << std::endl;
+			std::cout << "bond id " << bond_buffer << std::endl;
+			std::cout << "equal_time_gf: " << std::endl;
+			print_matrix(equal_time_gf);
+			std::cout << "from scratch: " << std::endl;
+			print_matrix(gf_from_scratch());
+			std::cout << "---" << std::endl;
 		}
 
 		void advance_forward()
