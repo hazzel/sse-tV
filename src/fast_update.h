@@ -52,7 +52,6 @@ class fast_update
 			{
 				B[2*i] = A[2*i] - id_2;
 				B[2*i+1] = B[2*i].inverse();
-				print_matrix(B[2*i+1]);
 			}
 			
 			C.resize(4, dmatrix_t(2, 2));
@@ -68,13 +67,20 @@ class fast_update
 
 		void build_vertex_matrices()
 		{
-			vertex_matrices.resize(3. * l.n_bonds() + 1);
+			vertex_matrices.resize(2. * l.n_bonds() + 1);
 			vertex_matrices[0] = sparse_t(l.n_sites(), l.n_sites());
 			vertex_matrices[0].setIdentity();
-			for (int type = 0; type < 3; ++type)
+			inv_vertex_matrices.resize(2. * l.n_bonds() + 1);
+			inv_vertex_matrices[0] = sparse_t(l.n_sites(), l.n_sites());
+			inv_vertex_matrices[0].setIdentity();
+			for (int type = 0; type < 2; ++type)
 				for (int i = 1; i <= l.n_bonds(); ++i)
+				{
 					vertex_matrices[type*l.n_bonds() + i] =
-						create_sparse_vertex_matrix(type, i);
+						create_sparse_vertex_matrix(2*type, type*l.n_bonds() + i);
+					inv_vertex_matrices[type*l.n_bonds() + i] =
+						create_sparse_vertex_matrix(2*type+1, type*l.n_bonds() + i);
+				}
 		}
 
 		void max_order(int n_max_order_)
@@ -195,14 +201,20 @@ class fast_update
 			return s;
 		}
 
-		const sparse_t& vertex_matrix(int type, int vertex_id)
+		const sparse_t& vertex_matrix(int vertex_id)
 		{
-			if (type == 3)
-				--type;
 			if (bond_list[vertex_id-1] == 0)
 				return vertex_matrices[0];
 			else
-				return vertex_matrices[type * l.n_bonds() + bond_list[vertex_id-1]];
+				return vertex_matrices[bond_list[vertex_id-1]];
+		}
+		
+		const sparse_t& inv_vertex_matrix(int vertex_id)
+		{
+			if (bond_list[vertex_id-1] == 0)
+				return inv_vertex_matrices[0];
+			else
+				return inv_vertex_matrices[bond_list[vertex_id-1]];
 		}
 
 		matrix_t<2, 2> vertex_block(const dmatrix_t& m, int vertex_id)
@@ -232,7 +244,7 @@ class fast_update
 			for (int i = n; i > m; --i)
 			{
 				if (bond_list[i-1] == 0) continue;
-				P *= vertex_matrix(0, i);
+				P *= vertex_matrix(i);
 			}
 			return P;
 		}
@@ -325,14 +337,6 @@ class fast_update
 			PIG.row(1) = -equal_time_gf.row(bond.second);
 			PIG(1, bond.second) += 1.;
 			equal_time_gf.noalias() -= GP * denom * PIG;
-
-			std::cout << "inserted bond_type " << bond_type << std::endl;
-			std::cout << "bond id " << bond_buffer << std::endl;
-			std::cout << "equal_time_gf: " << std::endl;
-			print_matrix(equal_time_gf);
-			std::cout << "from scratch: " << std::endl;
-			print_matrix(gf_from_scratch());
-			std::cout << "---" << std::endl;
 		}
 
 		void advance_forward()
@@ -343,15 +347,15 @@ class fast_update
 			{
 				// Wrap time displaced gf forwards
 				if (bond_list[current_vertex] > 0)
-					time_displaced_gf = time_displaced_gf * vertex_matrix(0,
+					time_displaced_gf = time_displaced_gf * vertex_matrix(
 						current_vertex + 1);
 			}
 			else
 			{
 				// Wrap equal time gf forwards
 				if (bond_list[current_vertex] > 0)
-					equal_time_gf = vertex_matrix(0, current_vertex + 1)
-						* equal_time_gf * vertex_matrix(1, current_vertex + 1);
+					equal_time_gf = vertex_matrix(current_vertex + 1)
+						* equal_time_gf * inv_vertex_matrix(current_vertex + 1);
 			}
 			++current_vertex;
 		}
@@ -364,15 +368,15 @@ class fast_update
 			{
 				// Wrap time displaced gf forwards
 				if (bond_list[current_vertex - 1] > 0)
-					time_displaced_gf = vertex_matrix(1, current_vertex)
+					time_displaced_gf = inv_vertex_matrix(current_vertex)
 						* time_displaced_gf;
 			}
 			else
 			{
 				// Wrap equal time gf backwards
 				if (bond_list[current_vertex - 1] > 0)
-					equal_time_gf = vertex_matrix(1, current_vertex)
-						* equal_time_gf * vertex_matrix(0, current_vertex);
+					equal_time_gf = inv_vertex_matrix(current_vertex)
+						* equal_time_gf * vertex_matrix(current_vertex);
 			}
 			--current_vertex;
 		}
