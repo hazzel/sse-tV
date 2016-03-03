@@ -16,7 +16,8 @@ mc::mc(const std::string& dir)
 	n_warmup = pars.value_or_default<int>("warmup", 100000);
 	n_prebin = pars.value_or_default<int>("prebin", 500);
 	n_rebuild = pars.value_or_default<int>("rebuild", 1000);
-	n_matsubara = pars.value_or_default<int>("matsubara_freqs", 10);
+	config.param.n_discrete_tau = pars.value_or_default<int>("discrete_tau", 10);
+	config.param.n_matsubara = pars.value_or_default<int>("matsubara_freqs", 10);
 	hc.L = pars.value_or_default<int>("L", 9);
 	config.param.beta = 1./pars.value_or_default<double>("T", 0.2);
 	config.param.t = pars.value_or_default<double>("t", 1.0);
@@ -60,6 +61,8 @@ mc::mc(const std::string& dir)
 	config.measure.add_observable("energy", n_prebin);
 	config.measure.add_vectorobservable("<n_r n_0>", config.l.max_distance() + 1,
 		n_prebin);
+	config.measure.add_vectorobservable("dynamical_M2_tau",
+		config.param.n_discrete_tau + 1, n_prebin);
 	config.measure.add_observable("norm error", n_prebin);
 	config.measure.add_observable("max error", n_prebin);
 	config.measure.add_observable("avg error", n_prebin);
@@ -181,8 +184,6 @@ void mc::do_update()
 		}
 		config.M.advance_backward();
 		config.M.stabilize_backward();
-//		std::cout << config.M.non_ident(0) << ", " << config.M.non_ident(1)
-//			<< std::endl;
 	}
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
@@ -205,6 +206,16 @@ void mc::do_update()
 	if (sweep == n_warmup)
 		std::cout << "Max order set to " << config.M.max_order() << "."
 			<< std::endl;
+	if (is_thermalized())
+	{
+		std::vector<double> time_grid(config.param.n_discrete_tau + 1);
+		for (int t = 0; t <= config.param.n_discrete_tau; ++t)
+			time_grid[t] = static_cast<double>(t) / static_cast<double>(config.
+				param.n_discrete_tau) * config.param.beta;
+		std::vector<double> dyn_M2(time_grid.size(), 0.);
+		config.M.measure_imaginary_time_M2(time_grid, dyn_M2);
+		config.measure.add("dynamical_M2_tau", dyn_M2);
+	}
 	status();
 }
 

@@ -403,17 +403,22 @@ class fast_update
 
 		double measure_M2()
 		{
+			return measure_M2(equal_time_gf);
+		}
+		
+		double measure_M2(const dmatrix_t& gf)
+		{
 			double M2 = 0.;
 			// Use translational symmetry and half-filling here
 			int i = rng() * l.n_sites();
 			for (int j = 0; j < l.n_sites(); ++j)
-				M2 += equal_time_gf(i, j) * equal_time_gf(i, j)
-					/ std::pow(l.n_sites(), 1.0);
+				M2 += gf(i, j) * gf(i, j) / std::pow(l.n_sites(), 1.0);
 			return M2;
 		}
 		
 		void measure_density_correlations(std::vector<double>& corr)
 		{
+			std::fill(corr.begin(), corr.end(), 0.0);
 			// Use translational symmetry and half-filling here
 			int i = rng() * l.n_sites();
 			for (int j = 0; j < l.n_sites(); ++j)
@@ -421,11 +426,58 @@ class fast_update
 					* equal_time_gf(i, j) * equal_time_gf(i, j);
 		}
 
+		void measure_imaginary_time_M2(const std::vector<double>& time_grid,
+			std::vector<double>& dyn_M2)
+		{
+			std::fill(dyn_M2.begin(), dyn_M2.end(), 0.0);
+			std::vector<int> time_pos(time_grid.size(), 0);
+			assign_random_times(time_grid, time_pos);
+			enable_time_displaced_gf();
+			time_displaced_gf = equal_time_gf;
+			int dtau = 0, m = 0;
+			for (int n = 0; n < n_max_order; ++n)
+			{
+				if (bond_list[current_vertex - 1] > 0)
+				{
+					if (dtau == time_pos[m])
+					{
+						dyn_M2[m] = measure_M2(time_displaced_gf);
+						++m;
+					}
+					++dtau;
+				}
+				advance_backward();
+//				stabilize_backward();
+			}
+			disable_time_displaced_gf();
+			current_vertex = n_max_order;
+		}
+
 		const dmatrix_t& measure_time_displaced_gf()
 		{
 			return time_displaced_gf;
 		}
 	private:
+		void assign_random_times(const std::vector<double>& time_grid,
+			std::vector<int>& time_pos)
+		{
+			std::vector<double> random_times(n_non_ident[0] + n_non_ident[1]);
+			std::for_each(random_times.begin(), random_times.end(), [&](double& t)
+				{ t = rng() * param.beta; } );
+			std::sort(random_times.begin(), random_times.end());
+			int pos = 0;
+			for (int i = 1; i <= random_times.size();)
+			{
+				if (time_grid[pos] >= random_times[i-1])
+					++i;
+				else
+				{
+					time_pos[pos] = i - 1;
+					++pos;
+				}
+			}
+		}
+
 		void print_matrix(const dmatrix_t& m)
 		{
 			Eigen::IOFormat clean(4, 0, ", ", "\n", "[", "]");
