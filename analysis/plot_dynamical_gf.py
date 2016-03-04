@@ -87,6 +87,7 @@ for f in filelist:
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
 
+		'''
 		parameter, perr = fit_function( [0.0, 0.05, 9.], x_tau, y_tau, FitFunction, datayerrors=err_tau)
 		px = np.linspace(x_tau[0], x_tau[-1], 1000)
 		ax2.plot(px, FitFunction(px, *parameter), 'k-', linewidth=3.0)
@@ -95,6 +96,7 @@ for f in filelist:
 		ax2.text(0.05, 0.92, r"$\Delta_{ED} = 0.9264$", transform=ax2.transAxes, fontsize=20, va='top')
 		print parameter
 		print perr
+		'''
 		
 		c = 2
 		ax3.set_xlabel(r"$n$")

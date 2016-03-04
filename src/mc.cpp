@@ -185,6 +185,16 @@ void mc::do_update()
 		config.M.advance_backward();
 		config.M.stabilize_backward();
 	}
+	if (is_thermalized())
+	{
+		std::vector<double> time_grid(config.param.n_discrete_tau + 1);
+		for (int t = 0; t <= config.param.n_discrete_tau; ++t)
+			time_grid[t] = static_cast<double>(t) / static_cast<double>(config.
+				param.n_discrete_tau) * config.param.beta;
+		std::vector<double> dyn_M2(time_grid.size(), 0.);
+		config.M.measure_imaginary_time_M2(time_grid, dyn_M2);
+		config.measure.add("dynamical_M2_tau", dyn_M2);
+	}
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		config.M.advance_forward();
@@ -206,16 +216,6 @@ void mc::do_update()
 	if (sweep == n_warmup)
 		std::cout << "Max order set to " << config.M.max_order() << "."
 			<< std::endl;
-	if (is_thermalized())
-	{
-		std::vector<double> time_grid(config.param.n_discrete_tau + 1);
-		for (int t = 0; t <= config.param.n_discrete_tau; ++t)
-			time_grid[t] = static_cast<double>(t) / static_cast<double>(config.
-				param.n_discrete_tau) * config.param.beta;
-		std::vector<double> dyn_M2(time_grid.size(), 0.);
-		config.M.measure_imaginary_time_M2(time_grid, dyn_M2);
-		config.measure.add("dynamical_M2_tau", dyn_M2);
-	}
 	status();
 }
 

@@ -21,6 +21,21 @@ class qr_stabilizer
 			: measure(measure_), update_time_displaced_gf(false),
 			equal_time_gf(equal_time_gf_), time_displaced_gf(time_displaced_gf_)
 		{}
+
+		void enable_time_displaced_gf()
+		{
+			update_time_displaced_gf = true;
+			std::copy(U.begin(), U.end(), U_buffer.begin());
+			std::copy(D.begin(), D.end(), D_buffer.begin());
+			std::copy(V.begin(), V.end(), V_buffer.begin());
+		}
+		void disable_time_displaced_gf()
+		{
+			update_time_displaced_gf = false;
+			std::copy(U_buffer.begin(), U_buffer.end(), U.begin());
+			std::copy(D_buffer.begin(), D_buffer.end(), D.begin());
+			std::copy(V_buffer.begin(), V_buffer.end(), V.begin());
+		}
 		
 		void resize(int n_intervals_, int dimension)
 		{
@@ -29,6 +44,9 @@ class qr_stabilizer
 			U.resize(n_intervals + 1);
 			D.resize(n_intervals + 1);
 			V.resize(n_intervals + 1);
+			U_buffer.resize(n_intervals + 1);
+			D_buffer.resize(n_intervals + 1);
+			V_buffer.resize(n_intervals + 1);
 			for (int n = 0; n < n_intervals + 1; ++n)
 			{
 				U[n] = id_N; D[n] = id_N; V[n] = id_N;
@@ -99,15 +117,15 @@ class qr_stabilizer
 			const dmatrix_t& V_r_)
 		{
 			dmatrix_t old_gf = equal_time_gf;
-			qr_solver.compute(U_r_.transpose() * U_l_.inverse() + D_r_ * (V_r_
-				* V_l_) * D_l_);
-			dmatrix_t r = qr_solver.matrixQR().triangularView<Eigen::Upper>();
+			dmatrix_t inv_U_l = U_l_.inverse();
+			dmatrix_t inv_U_r = U_r_.transpose();
+
+			qr_solver.compute(inv_U_r * inv_U_l + D_r_ * (V_r_ * V_l_) * D_l_);
+			dmatrix_t R = qr_solver.matrixQR().triangularView<Eigen::Upper>();
 			dmatrix_t D = qr_solver.matrixQR().diagonal().asDiagonal();
-			equal_time_gf = (U_l_.inverse() * (qr_solver.colsPermutation()
-				* r.inverse())) * (qr_solver.matrixQ().transpose()
-				* U_r_.transpose());
-//			if ((old_gf - equal_time_gf).norm() > 0.00001)
-//				std::cout << (old_gf - equal_time_gf).norm() << std::endl;
+			equal_time_gf = (inv_U_l * (qr_solver.colsPermutation()
+				* R.inverse())) * (qr_solver.matrixQ().transpose() * inv_U_r);
+
 			measure.add("norm error", (old_gf - equal_time_gf).norm());
 			measure.add("max error", (old_gf - equal_time_gf).lpNorm<Eigen::
 				Infinity>());
@@ -119,6 +137,38 @@ class qr_stabilizer
 			const dmatrix_t& D_l_, const dmatrix_t& V_l_, const dmatrix_t& U_r_,
 			const dmatrix_t& D_r_, const dmatrix_t& V_r_)
 		{
+			int N = id_N.rows();
+			dmatrix_t inv_U_l = U_l_.inverse();
+			dmatrix_t inv_V_l = V_l_.transpose();
+			dmatrix_t inv_U_r = U_r_.transpose();
+			dmatrix_t inv_V_r = V_r_.inverse();
+
+			dmatrix_t M(2 * N, 2 * N);
+			M.topLeftCorner(N, N) = inv_V_l * inv_V_r;
+			M.topRightCorner(N, N) = D_l_;
+			M.bottomLeftCorner(N, N) = -D_r_;
+			M.bottomRightCorner(N, N) = inv_U_r * inv_U_l;
+
+			qr_solver.compute(M);
+			dmatrix_t R = qr_solver.matrixQR().triangularView<Eigen::Upper>();
+			dmatrix_t inv_V = qr_solver.colsPermutation() * R.inverse();
+			dmatrix_t inv_U = qr_solver.matrixQ().transpose();
+
+			dmatrix_t lhs(2 * N, 2 * N);
+			lhs.topLeftCorner(N, N) = inv_V_r * inv_V.topLeftCorner(N, N);
+//			lhs.topRightCorner(N, N) = inv_V_r * inv_V.topRightCorner(N, N);
+			lhs.bottomLeftCorner(N, N) = inv_U_l * inv_V.bottomLeftCorner(N, N);
+//			lhs.bottomRightCorner(N, N) = inv_U_l * inv_V.bottomRightCorner(N, N);
+			
+			dmatrix_t rhs(2 * N, 2 * N);
+			rhs.topLeftCorner(N, N) = inv_U.topLeftCorner(N, N) * inv_V_l;
+//			rhs.topRightCorner(N, N) = inv_U.topRightCorner(N, N) * inv_U_r;
+			rhs.bottomLeftCorner(N, N) = inv_U.bottomLeftCorner(N, N) * inv_V_l;
+//			rhs.bottomRightCorner(N, N) = inv_U.bottomRightCorner(N, N) * inv_U_r;
+
+			time_displaced_gf = lhs.bottomLeftCorner(N, N)
+				* rhs.topLeftCorner(N, N) + lhs.bottomRightCorner(N, N)
+				* rhs.bottomLeftCorner(N, N);
 		}
 	private:
 		void print_matrix(const dmatrix_t& m)
@@ -136,6 +186,9 @@ class qr_stabilizer
 		std::vector<dmatrix_t> U;
 		std::vector<dmatrix_t> D;
 		std::vector<dmatrix_t> V;
+		std::vector<dmatrix_t> U_buffer;
+		std::vector<dmatrix_t> D_buffer;
+		std::vector<dmatrix_t> V_buffer;
 		dmatrix_t U_l;
 		dmatrix_t D_l;
 		dmatrix_t V_l;

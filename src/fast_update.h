@@ -26,6 +26,42 @@ class fast_update
 				equal_time_gf{}, time_displaced_gf{},
 				stabilizer{measure, equal_time_gf, time_displaced_gf}
 		{}
+		
+		void serialize(odump& out)
+		{
+			int size = bond_list.size();
+			out.write(size);
+			for (auto b : bond_list)
+				out.write(b);
+			out.write(current_vertex);
+			out.write(n_max_order);
+			size = n_non_ident.size();
+			out.write(size);
+			for (auto b : n_non_ident)
+				out.write(b);
+		}
+
+		void serialize(idump& in)
+		{
+			int size = 0; in.read(size);
+			bond_list.resize(size);
+			for (int i = 0; i < size; ++i)
+			{
+				int b = 0; in.read(b);
+				bond_list[i] = b;
+			}
+			int n = 0; in.read(n); current_vertex = n;
+			in.read(n); int max_order_ = n;
+			in.read(size);
+			n_non_ident.resize(size);
+			for (int i = 0; i < size; ++i)
+			{
+				int b = 0; in.read(b);
+				n_non_ident[i] = b;
+			}
+			max_order(max_order_);
+			rebuild();
+		}
 
 		void initialize(int max_order_)
 		{
@@ -139,11 +175,13 @@ class fast_update
 		void enable_time_displaced_gf()
 		{
 			update_time_displaced_gf = true;
+			stabilizer.enable_time_displaced_gf();
 		}
 
 		void disable_time_displaced_gf()
 		{
 			update_time_displaced_gf = false;
+			stabilizer.disable_time_displaced_gf();
 		}
 
 		void rebuild()
@@ -153,14 +191,6 @@ class fast_update
 				dmatrix_t b = propagator(n * param.n_delta, (n-1) * param.n_delta);
 				stabilizer.set(n, b);
 			}
-		}
-
-		void serialize(odump& out)
-		{
-		}
-
-		void serialize(idump& in)
-		{
 		}
 
 		sparse_t create_sparse_vertex_matrix(int type, int bond_id)
@@ -347,10 +377,10 @@ class fast_update
 			{
 				// Wrap time displaced gf forwards
 				if (bond_list[current_vertex] > 0)
-					time_displaced_gf = time_displaced_gf * vertex_matrix(
-						current_vertex + 1);
+					time_displaced_gf = vertex_matrix(current_vertex + 1)
+						* time_displaced_gf;
 			}
-			else
+			//else
 			{
 				// Wrap equal time gf forwards
 				if (bond_list[current_vertex] > 0)
@@ -371,7 +401,7 @@ class fast_update
 					time_displaced_gf = inv_vertex_matrix(current_vertex)
 						* time_displaced_gf;
 			}
-			else
+			//else
 			{
 				// Wrap equal time gf backwards
 				if (bond_list[current_vertex - 1] > 0)
@@ -437,6 +467,8 @@ class fast_update
 			int dtau = 0, m = 0;
 			for (int n = 0; n < n_max_order; ++n)
 			{
+				advance_forward();
+				stabilize_forward();
 				if (bond_list[current_vertex - 1] > 0)
 				{
 					if (dtau == time_pos[m])
@@ -445,12 +477,12 @@ class fast_update
 						++m;
 					}
 					++dtau;
+					//std::cout << "not ident" << std::endl;
 				}
-				advance_backward();
-//				stabilize_backward();
+				//print_matrix(time_displaced_gf);
 			}
 			disable_time_displaced_gf();
-			current_vertex = n_max_order;
+			current_vertex = 0;
 		}
 
 		const dmatrix_t& measure_time_displaced_gf()
