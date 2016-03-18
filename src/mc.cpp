@@ -185,6 +185,7 @@ void mc::do_update()
 		config.M.advance_backward();
 		config.M.stabilize_backward();
 	}
+	/*
 	if (is_thermalized())
 	{
 		std::vector<double> time_grid(config.param.n_discrete_tau + 1);
@@ -195,6 +196,7 @@ void mc::do_update()
 		config.M.measure_imaginary_time_M2(time_grid, dyn_M2);
 		config.measure.add("dynamical_M2_tau", dyn_M2);
 	}
+	*/
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		config.M.advance_forward();
