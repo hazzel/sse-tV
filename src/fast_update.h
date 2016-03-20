@@ -477,9 +477,7 @@ class fast_update
 						++m;
 					}
 					++dtau;
-					//std::cout << "not ident" << std::endl;
 				}
-				//print_matrix(time_displaced_gf);
 			}
 			disable_time_displaced_gf();
 			current_vertex = 0;

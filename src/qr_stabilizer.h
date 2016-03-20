@@ -156,19 +156,22 @@ class qr_stabilizer
 
 			dmatrix_t lhs(2 * N, 2 * N);
 			lhs.topLeftCorner(N, N) = inv_V_r * inv_V.topLeftCorner(N, N);
-//			lhs.topRightCorner(N, N) = inv_V_r * inv_V.topRightCorner(N, N);
+			lhs.topRightCorner(N, N) = inv_V_r * inv_V.topRightCorner(N, N);
 			lhs.bottomLeftCorner(N, N) = inv_U_l * inv_V.bottomLeftCorner(N, N);
-//			lhs.bottomRightCorner(N, N) = inv_U_l * inv_V.bottomRightCorner(N, N);
+			lhs.bottomRightCorner(N, N) = inv_U_l * inv_V.bottomRightCorner(N, N);
 			
 			dmatrix_t rhs(2 * N, 2 * N);
 			rhs.topLeftCorner(N, N) = inv_U.topLeftCorner(N, N) * inv_V_l;
-//			rhs.topRightCorner(N, N) = inv_U.topRightCorner(N, N) * inv_U_r;
+			rhs.topRightCorner(N, N) = inv_U.topRightCorner(N, N) * inv_U_r;
 			rhs.bottomLeftCorner(N, N) = inv_U.bottomLeftCorner(N, N) * inv_V_l;
-//			rhs.bottomRightCorner(N, N) = inv_U.bottomRightCorner(N, N) * inv_U_r;
+			rhs.bottomRightCorner(N, N) = inv_U.bottomRightCorner(N, N) * inv_U_r;
 
 			time_displaced_gf = lhs.bottomLeftCorner(N, N)
 				* rhs.topLeftCorner(N, N) + lhs.bottomRightCorner(N, N)
 				* rhs.bottomLeftCorner(N, N);
+			
+			equal_time_gf = lhs.bottomLeftCorner(N, N) * rhs.topRightCorner(N, N)
+				+ lhs.bottomRightCorner(N, N) * rhs.bottomRightCorner(N, N);
 		}
 	private:
 		void print_matrix(const dmatrix_t& m)

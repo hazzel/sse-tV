@@ -22,10 +22,11 @@ mc::mc(const std::string& dir)
 	config.param.beta = 1./pars.value_or_default<double>("T", 0.2);
 	config.param.t = pars.value_or_default<double>("t", 1.0);
 	config.param.V = pars.value_or_default<double>("V", 1.355);
-	if (config.param.V > 0.5)
+	double v1_cutoff = pars.value_or_default<double>("v1_cutoff", 0.5);
+	if (config.param.V > v1_cutoff)
 	{
-		config.param.V1 = 0.5;
-		config.param.V2 = config.param.V - 0.5;
+		config.param.V1 = v1_cutoff;
+		config.param.V2 = config.param.V - v1_cutoff;
 	}
 	else
 	{
@@ -185,7 +186,6 @@ void mc::do_update()
 		config.M.advance_backward();
 		config.M.stabilize_backward();
 	}
-	/*
 	if (is_thermalized())
 	{
 		std::vector<double> time_grid(config.param.n_discrete_tau + 1);
@@ -196,7 +196,6 @@ void mc::do_update()
 		config.M.measure_imaginary_time_M2(time_grid, dyn_M2);
 		config.measure.add("dynamical_M2_tau", dyn_M2);
 	}
-	*/
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		config.M.advance_forward();
