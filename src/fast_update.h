@@ -446,6 +446,16 @@ class fast_update
 			return M2;
 		}
 		
+		double measure_ci_cj(const dmatrix_t& gf)
+		{
+			double sum = 0.;
+			// Use translational symmetry and half-filling here
+			int i = rng() * l.n_sites();
+			for (int j = 0; j < l.n_sites(); ++j)
+				sum += gf(i, j) / std::pow(l.n_sites(), 1.0);
+			return sum;
+		}
+		
 		void measure_density_correlations(std::vector<double>& corr)
 		{
 			std::fill(corr.begin(), corr.end(), 0.0);
@@ -490,11 +500,15 @@ class fast_update
 		
 		void measure_matsubara_M2(int n_max, std::vector<double>& dyn_M2)
 		{
-			std::vector<double> random_times(n_non_ident[0] + n_non_ident[1] + 1);
-			std::for_each(random_times.begin(), random_times.end(), [&](double& t)
-				{ t = rng() * param.beta; } );
-			std::sort(random_times.begin(), random_times.end());
-			random_times[random_times.size() - 1] = param.beta;
+			std::vector<std::vector<double>> random_times(n_max);
+			for (auto& vec : random_times)
+			{
+				vec.resize(n_non_ident[0] + n_non_ident[1] + 1);
+				std::for_each(vec.begin(), vec.end(), [&](double& t)
+					{ t = rng() * param.beta; } );
+				std::sort(vec.begin(), vec.end());
+				vec[vec.size() - 1] = param.beta;
+			}
 
 			enable_time_displaced_gf();
 			time_displaced_gf = equal_time_gf;
@@ -511,13 +525,13 @@ class fast_update
 						{
 							double omega = 2. * 4. * std::atan(1.) * omega_n
 								/ param.beta;
-							dyn_M2[omega_n] = measure_M2(time_displaced_gf)
-							* (std::sin(omega * random_times[t+1]) - std::sin(omega
-							* random_times[t])) / omega;
+							dyn_M2[omega_n] += measure_M2(time_displaced_gf)
+								* (std::sin(omega * random_times[omega_n][t+1])
+								- std::sin(omega * random_times[omega_n][t])) / omega;
 						}
 						else
-							dyn_M2[0] = measure_M2(time_displaced_gf)
-								* (random_times[t+1] - random_times[t]);
+							dyn_M2[0] += measure_M2(time_displaced_gf)
+								* (random_times[0][t+1] - random_times[0][t]);
 					}
 					++t;
 				}
