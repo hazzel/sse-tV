@@ -488,11 +488,6 @@ class fast_update
 					}
 					++dtau;
 				}
-				if (n < n_max_order)
-				{
-					advance_forward();
-					stabilize_forward();
-				}
 			}
 			disable_time_displaced_gf();
 			current_vertex = 0;
@@ -503,21 +498,21 @@ class fast_update
 			std::vector<std::vector<double>> random_times(n_max);
 			for (auto& vec : random_times)
 			{
-				vec.resize(n_non_ident[0] + n_non_ident[1] + 1);
+				vec.resize(n_non_ident[0] + n_non_ident[1] + 2);
 				std::for_each(vec.begin(), vec.end(), [&](double& t)
 					{ t = rng() * param.beta; } );
 				std::sort(vec.begin(), vec.end());
+				vec[0] = 0.;
 				vec[vec.size() - 1] = param.beta;
 			}
 
 			enable_time_displaced_gf();
 			time_displaced_gf = equal_time_gf;
 			int t = 0;
-			for (int n = 1; n <= n_max_order; ++n)
+			for (int n = 0; n <= n_max_order; ++n)
 			{
-				advance_forward();
-				stabilize_forward();
-				if (bond_list[current_vertex - 1] > 0)
+				if (current_vertex == 0 || (current_vertex > 0 &&
+					bond_list[current_vertex - 1] > 0))
 				{
 					for (int omega_n = 0; omega_n < n_max; ++omega_n)
 					{
@@ -534,6 +529,11 @@ class fast_update
 								* (random_times[0][t+1] - random_times[0][t]);
 					}
 					++t;
+				}
+				if (n < n_max_order)
+				{
+					advance_forward();
+					stabilize_forward();
 				}
 			}
 			disable_time_displaced_gf();
