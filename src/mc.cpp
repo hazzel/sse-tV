@@ -62,6 +62,8 @@ mc::mc(const std::string& dir)
 	config.measure.add_observable("energy", n_prebin);
 	config.measure.add_vectorobservable("<n_r n_0>", config.l.max_distance() + 1,
 		n_prebin);
+	config.measure.add_vectorobservable("dynamical_M2_mat",
+		config.param.n_matsubara, n_prebin);
 	config.measure.add_vectorobservable("dynamical_M2_tau",
 		config.param.n_discrete_tau + 1, n_prebin);
 	config.measure.add_observable("norm error", n_prebin);
@@ -83,6 +85,8 @@ mc::mc(const std::string& dir)
 	qmc.add_event(event_rebuild{config, config.measure}, "rebuild");
 	qmc.add_event(event_build{config, rng}, "initial build");
 	qmc.add_event(event_max_order{config, rng}, "max_order");
+	qmc.add_event(event_dyn_M2_mat{config, rng}, "dyn_M2_mat");
+	qmc.add_event(event_dyn_M2_tau{config, rng}, "dyn_M2_tau");
 	//Initialize vertex list to reduce warm up time
 	qmc.trigger_event("initial build");
 }
@@ -187,15 +191,9 @@ void mc::do_update()
 		config.M.stabilize_backward();
 	}
 	if (is_thermalized())
-	{
-		std::vector<double> time_grid(config.param.n_discrete_tau + 1);
-		for (int t = 0; t <= config.param.n_discrete_tau; ++t)
-			time_grid[t] = static_cast<double>(t) / static_cast<double>(config.
-				param.n_discrete_tau) * config.param.beta;
-		std::vector<double> dyn_M2(time_grid.size(), 0.);
-		config.M.measure_imaginary_time_M2(time_grid, dyn_M2);
-		config.measure.add("dynamical_M2_tau", dyn_M2);
-	}
+		qmc.trigger_event("dyn_M2_tau");
+	if (is_thermalized())
+		qmc.trigger_event("dyn_M2_mat");
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		config.M.advance_forward();

@@ -462,21 +462,64 @@ class fast_update
 			std::fill(dyn_M2.begin(), dyn_M2.end(), 0.0);
 			std::vector<int> time_pos(time_grid.size(), 0);
 			assign_random_times(time_grid, time_pos);
+			
 			enable_time_displaced_gf();
 			time_displaced_gf = equal_time_gf;
 			int dtau = 0, m = 0;
-			for (int n = 0; n < n_max_order; ++n)
+			for (int n = 0; n <= n_max_order; ++n)
 			{
-				advance_forward();
-				stabilize_forward();
-				if (bond_list[current_vertex - 1] > 0)
+				if (current_vertex == 0 || (current_vertex > 0 &&
+					bond_list[current_vertex - 1] > 0))
 				{
-					if (dtau == time_pos[m])
+					while (m < time_pos.size() && dtau == time_pos[m])
 					{
 						dyn_M2[m] = measure_M2(time_displaced_gf);
 						++m;
 					}
 					++dtau;
+				}
+				if (n < n_max_order)
+				{
+					advance_forward();
+					stabilize_forward();
+				}
+			}
+			disable_time_displaced_gf();
+			current_vertex = 0;
+		}
+		
+		void measure_matsubara_M2(int n_max, std::vector<double>& dyn_M2)
+		{
+			std::vector<double> random_times(n_non_ident[0] + n_non_ident[1] + 1);
+			std::for_each(random_times.begin(), random_times.end(), [&](double& t)
+				{ t = rng() * param.beta; } );
+			std::sort(random_times.begin(), random_times.end());
+			random_times[random_times.size() - 1] = param.beta;
+
+			enable_time_displaced_gf();
+			time_displaced_gf = equal_time_gf;
+			int t = 0;
+			for (int n = 1; n <= n_max_order; ++n)
+			{
+				advance_forward();
+				stabilize_forward();
+				if (bond_list[current_vertex - 1] > 0)
+				{
+					for (int omega_n = 0; omega_n < n_max; ++omega_n)
+					{
+						if (omega_n > 0)
+						{
+							double omega = 2. * 4. * std::atan(1.) * omega_n
+								/ param.beta;
+							dyn_M2[omega_n] = measure_M2(time_displaced_gf)
+							* (std::sin(omega * random_times[t+1]) - std::sin(omega
+							* random_times[t])) / omega;
+						}
+						else
+							dyn_M2[0] = measure_M2(time_displaced_gf)
+								* (random_times[t+1] - random_times[t]);
+					}
+					++t;
 				}
 			}
 			disable_time_displaced_gf();
@@ -495,17 +538,9 @@ class fast_update
 			std::for_each(random_times.begin(), random_times.end(), [&](double& t)
 				{ t = rng() * param.beta; } );
 			std::sort(random_times.begin(), random_times.end());
-			int pos = 0;
-			for (int i = 1; i <= random_times.size();)
-			{
-				if (time_grid[pos] >= random_times[i-1])
-					++i;
-				else
-				{
-					time_pos[pos] = i - 1;
-					++pos;
-				}
-			}
+			for (int i = 0; i < time_pos.size(); ++i)
+				time_pos[i] = std::lower_bound(random_times.begin(),
+					random_times.end(), time_grid[i]) - random_times.begin();
 		}
 
 		void print_matrix(const dmatrix_t& m)
