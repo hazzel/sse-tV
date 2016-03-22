@@ -59,12 +59,10 @@ for f in filelist:
 		h = float(plist[i]["V"])
 		T = float(plist[i]["T"])
 		L = float(plist[i]["L"])
-		'''
 		for j in range(len(ed_data)):
 			if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
 				n_ed_tau = int(ed_data[j,8])
 				n_ed_mat = int(ed_data[j,10+n_ed_tau])
-		'''
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
 		x_mat = (np.array(range(0, n_matsubara)) * 2.) * np.pi * T
@@ -84,11 +82,9 @@ for f in filelist:
 		(_, caps, _) = ax1.errorbar(x_mat, y_mat * x_mat**2., yerr=err_mat * x_mat**2., marker='None', capsize=8, color="green")
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
-		'''
 		for j in range(len(ed_data)):
 			if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
 				ax1.plot(np.array(range(0, n_ed_mat)) * 2. * np.pi * T, ed_data[j,11+n_ed_tau:] * ((np.array(range(0, n_ed_mat)) * 2.) * np.pi * T)**2., marker='o', color="r", markersize=10.0, linewidth=2.0)
-		'''
 			
 		ax2.set_xlabel(r"$\tau$")
 		ax2.set_ylabel(r"$M_2(\tau)$")
@@ -97,11 +93,9 @@ for f in filelist:
 		(_, caps, _) = ax2.errorbar(x_tau, y_tau, yerr=err_tau, marker='None', capsize=8, color="green")
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
-		'''
 		for j in range(len(ed_data)):
 			if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
 				ax2.plot(np.linspace(0., 1./T/2., n_ed_tau + 1), ed_data[j,9:10+n_ed_tau], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
-		'''
 		
 		try:
 			nmin = 0; nmax = len(x_tau)/2
@@ -119,7 +113,6 @@ for f in filelist:
 		ax3.set_xlabel(r"$n$")
 		ax3.set_ylabel(r"$\Delta_n$")
 		ax3.plot(x_delta, y_delta, marker="o", color="green", markersize=10.0, linewidth=2.0)
-		'''
 		for j in range(len(ed_data)):
 			if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
 				x_delta = np.array(range(1, n_ed_mat))
@@ -129,7 +122,6 @@ for f in filelist:
 						if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
 							y_delta[n-1] = estimator(n, 1./T, ed_data[j,11+n_ed_tau:])
 				ax3.plot(x_delta, y_delta, marker="o", color="red", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
-		'''
 		
 	plt.tight_layout()
 plt.show()

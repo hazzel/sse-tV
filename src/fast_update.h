@@ -488,6 +488,11 @@ class fast_update
 					}
 					++dtau;
 				}
+				if (n < n_max_order)
+				{
+					advance_forward();
+					stabilize_forward();
+				}
 			}
 			disable_time_displaced_gf();
 			current_vertex = 0;
