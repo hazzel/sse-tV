@@ -85,7 +85,7 @@ for f in filelist:
 			cap.set_markeredgewidth(1.4)
 		for j in range(len(ed_data)):
 			if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
-				ax1.plot(np.array(range(0, n_ed_mat)) * 2. * np.pi * T, ed_data[j,11+n_ed_tau:] * ((np.array(range(0, n_ed_mat)) * 2.) * np.pi * T)**2., marker='o', color="r", markersize=10.0, linewidth=2.0)
+				ax1.plot(np.array(range(0, n_ed_mat)) * 2. * np.pi * T, -ed_data[j,11+n_ed_tau:] * ((np.array(range(0, n_ed_mat)) * 2.) * np.pi * T)**2., marker='o', color="r", markersize=10.0, linewidth=2.0)
 			
 		ax2.set_xlabel(r"$\tau$")
 		ax2.set_ylabel(r"$M_2(\tau)$")
@@ -99,7 +99,7 @@ for f in filelist:
 				ax2.plot(np.linspace(0., 1./T/2., n_ed_tau + 1), ed_data[j,9:10+n_ed_tau], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 		try:
-			nmin = 0; nmax = len(x_tau)/2
+			nmin = len(x_tau)/8; nmax = len(x_tau)*2/3
 			parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 			px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
 			ax2.plot(px, FitFunction(px, *parameter), 'k-', linewidth=3.0)
@@ -121,7 +121,7 @@ for f in filelist:
 				for n in range(1, n_ed_mat):
 					for j in range(len(ed_data)):
 						if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
-							y_delta[n-1] = estimator(n, 1./T, ed_data[j,11+n_ed_tau:])
+							y_delta[n-1] = estimator(n, 1./T, -ed_data[j,11+n_ed_tau:])
 				ax3.plot(x_delta, y_delta, marker="o", color="red", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 	plt.tight_layout()

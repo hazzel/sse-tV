@@ -442,18 +442,8 @@ class fast_update
 			// Use translational symmetry and half-filling here
 			int i = rng() * l.n_sites();
 			for (int j = 0; j < l.n_sites(); ++j)
-				M2 += gf(i, j) * gf(i, j) / std::pow(l.n_sites(), 1.0);
+				M2 += gf(i, j) * gf(i, j) / l.n_sites();
 			return M2;
-		}
-		
-		double measure_ci_cj(const dmatrix_t& gf)
-		{
-			double sum = 0.;
-			// Use translational symmetry and half-filling here
-			int i = rng() * l.n_sites();
-			for (int j = 0; j < l.n_sites(); ++j)
-				sum += gf(i, j) / std::pow(l.n_sites(), 1.0);
-			return sum;
 		}
 		
 		void measure_density_correlations(std::vector<double>& corr)
@@ -467,7 +457,8 @@ class fast_update
 		}
 
 		void measure_dynamical_observable(int n_max, std::vector<double>& dyn_mat,
-			const std::vector<double>& time_grid, std::vector<double>& dyn_tau)
+			const std::vector<double>& time_grid, std::vector<double>& dyn_tau,
+			const std::function<double(const dmatrix_t&)>&& get_obs)
 		{
 			// Time grid for Matsubara frequency measurement
 			std::vector<std::vector<double>> random_times(n_max);
@@ -493,20 +484,20 @@ class fast_update
 					bond_list[current_vertex - 1] > 0))
 				{
 					// Matsubara frequency measurement
+					dyn_mat[0] += get_obs(time_displaced_gf)
+						* (random_times[0][t+1] - random_times[0][t]);
 					for (int omega_n = 1; omega_n < n_max; ++omega_n)
 					{
 						double omega = 2. * 4.*std::atan(1.) * omega_n / param.beta;
-						dyn_mat[omega_n] += measure_M2(time_displaced_gf)
+						dyn_mat[omega_n] += get_obs(time_displaced_gf)
 							* (std::sin(omega * random_times[omega_n][t+1])
 							- std::sin(omega * random_times[omega_n][t])) / omega;
 					}
-						dyn_mat[0] += measure_M2(time_displaced_gf)
-							* (random_times[0][t+1] - random_times[0][t]);
 					++t;
 					// Imaginary time measurement
 					while (m < time_pos.size() && dtau == time_pos[m])
 					{
-						dyn_tau[m] = measure_M2(time_displaced_gf);
+						dyn_tau[m] = get_obs(time_displaced_gf);
 						++m;
 					}
 					++dtau;
