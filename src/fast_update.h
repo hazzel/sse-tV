@@ -466,24 +466,47 @@ class fast_update
 					* equal_time_gf(i, j) * equal_time_gf(i, j);
 		}
 
-		void measure_imaginary_time_M2(const std::vector<double>& time_grid,
-			std::vector<double>& dyn_M2)
+		void measure_dynamical_observable(int n_max, std::vector<double>& dyn_mat,
+			const std::vector<double>& time_grid, std::vector<double>& dyn_tau)
 		{
-			std::fill(dyn_M2.begin(), dyn_M2.end(), 0.0);
+			// Time grid for Matsubara frequency measurement
+			std::vector<std::vector<double>> random_times(n_max);
+			for (auto& vec : random_times)
+			{
+				vec.resize(n_non_ident[0] + n_non_ident[1] + 2);
+				std::for_each(vec.begin(), vec.end(), [&](double& t)
+					{ t = rng() * param.beta; } );
+				std::sort(vec.begin(), vec.end());
+				vec[0] = 0.;
+				vec[vec.size() - 1] = param.beta;
+			}
+			// Time grid for imaginary time measurement
 			std::vector<int> time_pos(time_grid.size(), 0);
 			assign_random_times(time_grid, time_pos);
 			
 			enable_time_displaced_gf();
 			time_displaced_gf = equal_time_gf;
-			int dtau = 0, m = 0;
+			int dtau = 0, m = 0, t = 0;
 			for (int n = 0; n <= n_max_order; ++n)
 			{
 				if (current_vertex == 0 || (current_vertex > 0 &&
 					bond_list[current_vertex - 1] > 0))
 				{
+					// Matsubara frequency measurement
+					for (int omega_n = 1; omega_n < n_max; ++omega_n)
+					{
+						double omega = 2. * 4.*std::atan(1.) * omega_n / param.beta;
+						dyn_mat[omega_n] += measure_M2(time_displaced_gf)
+							* (std::sin(omega * random_times[omega_n][t+1])
+							- std::sin(omega * random_times[omega_n][t])) / omega;
+					}
+						dyn_mat[0] += measure_M2(time_displaced_gf)
+							* (random_times[0][t+1] - random_times[0][t]);
+					++t;
+					// Imaginary time measurement
 					while (m < time_pos.size() && dtau == time_pos[m])
 					{
-						dyn_M2[m] = measure_M2(time_displaced_gf);
+						dyn_tau[m] = measure_M2(time_displaced_gf);
 						++m;
 					}
 					++dtau;
@@ -498,53 +521,6 @@ class fast_update
 			current_vertex = 0;
 		}
 		
-		void measure_matsubara_M2(int n_max, std::vector<double>& dyn_M2)
-		{
-			std::vector<std::vector<double>> random_times(n_max);
-			for (auto& vec : random_times)
-			{
-				vec.resize(n_non_ident[0] + n_non_ident[1] + 2);
-				std::for_each(vec.begin(), vec.end(), [&](double& t)
-					{ t = rng() * param.beta; } );
-				std::sort(vec.begin(), vec.end());
-				vec[0] = 0.;
-				vec[vec.size() - 1] = param.beta;
-			}
-
-			enable_time_displaced_gf();
-			time_displaced_gf = equal_time_gf;
-			int t = 0;
-			for (int n = 0; n <= n_max_order; ++n)
-			{
-				if (current_vertex == 0 || (current_vertex > 0 &&
-					bond_list[current_vertex - 1] > 0))
-				{
-					for (int omega_n = 0; omega_n < n_max; ++omega_n)
-					{
-						if (omega_n > 0)
-						{
-							double omega = 2. * 4. * std::atan(1.) * omega_n
-								/ param.beta;
-							dyn_M2[omega_n] += measure_M2(time_displaced_gf)
-								* (std::sin(omega * random_times[omega_n][t+1])
-								- std::sin(omega * random_times[omega_n][t])) / omega;
-						}
-						else
-							dyn_M2[0] += measure_M2(time_displaced_gf)
-								* (random_times[0][t+1] - random_times[0][t]);
-					}
-					++t;
-				}
-				if (n < n_max_order)
-				{
-					advance_forward();
-					stabilize_forward();
-				}
-			}
-			disable_time_displaced_gf();
-			current_vertex = 0;
-		}
-
 		const dmatrix_t& measure_time_displaced_gf()
 		{
 			return time_displaced_gf;

@@ -38,36 +38,26 @@ struct event_max_order
 	}
 };
 
-struct event_dyn_M2_tau
+struct event_dyn_M2
 {
 	configuration& config;
 	Random& rng;
 
 	void trigger()
 	{
+		std::vector<double> dyn_M2_mat(config.param.n_matsubara, 0.);
 		std::vector<double> time_grid(2 * config.param.n_discrete_tau + 1);
 		for (int t = 0; t < time_grid.size(); ++t)
 			time_grid[t] = static_cast<double>(t) / static_cast<double>(2*config.
 				param.n_discrete_tau) * config.param.beta;
-		std::vector<double> dyn_M2(time_grid.size(), 0.);
-		config.M.measure_imaginary_time_M2(time_grid, dyn_M2);
-		std::vector<double> dyn_M2_avg(config.param.n_discrete_tau + 1);
-		for (int i = 0; i < dyn_M2_avg.size(); ++i)
-			dyn_M2_avg[i] = (dyn_M2[i] + dyn_M2[dyn_M2.size() - 1 - i]) / 2.;
-		config.measure.add("dynamical_M2_tau", dyn_M2_avg);
+		std::vector<double> dyn_M2_tau(time_grid.size(), 0.);
+		config.M.measure_dynamical_observable(config.param.n_matsubara,
+			dyn_M2_mat, time_grid, dyn_M2_tau);
+		std::vector<double> dyn_M2_tau_avg(config.param.n_discrete_tau + 1);
+		for (int i = 0; i < dyn_M2_tau_avg.size(); ++i)
+			dyn_M2_tau_avg[i] = (dyn_M2_tau[i] + dyn_M2_tau[dyn_M2_tau.size()
+				- 1 - i]) / 2.;
+		config.measure.add("dynamical_M2_mat", dyn_M2_mat);
+		config.measure.add("dynamical_M2_tau", dyn_M2_tau_avg);
 	}
 };
-
-struct event_dyn_M2_mat
-{
-	configuration& config;
-	Random& rng;
-
-	void trigger()
-	{
-		std::vector<double> dyn_M2(config.param.n_matsubara, 0.);
-			config.M.measure_matsubara_M2(config.param.n_matsubara, dyn_M2);
-		config.measure.add("dynamical_M2_mat", dyn_M2);
-	}
-};
-

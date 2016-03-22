@@ -44,6 +44,7 @@ marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 
 filelist = []
 filelist.append(glob.glob("../bin/job/*.out"))
+filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T1.0/*task*.out"))
 filelist.sort()
 ed_data = pylab.loadtxt(glob.glob("../data/ed*")[0])
 
