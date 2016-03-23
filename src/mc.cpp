@@ -206,6 +206,8 @@ void mc::do_update()
 			}
 		}
 	}
+	if (is_thermalized())
+		qmc.trigger_event("dyn_M2");
 	++sweep;
 	if (!is_thermalized())
 		qmc.trigger_event("max_order");

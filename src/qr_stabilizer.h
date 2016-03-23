@@ -22,9 +22,10 @@ class qr_stabilizer
 			equal_time_gf(equal_time_gf_), time_displaced_gf(time_displaced_gf_)
 		{}
 
-		void enable_time_displaced_gf()
+		void enable_time_displaced_gf(int direction)
 		{
 			update_time_displaced_gf = true;
+			sweep_direction = direction;
 			std::copy(U.begin(), U.end(), U_buffer.begin());
 			std::copy(D.begin(), D.end(), D_buffer.begin());
 			std::copy(V.begin(), V.end(), V_buffer.begin());
@@ -166,9 +167,14 @@ class qr_stabilizer
 			rhs.bottomLeftCorner(N, N) = inv_U.bottomLeftCorner(N, N) * inv_V_l;
 			rhs.bottomRightCorner(N, N) = inv_U.bottomRightCorner(N, N) * inv_U_r;
 
-			time_displaced_gf = lhs.bottomLeftCorner(N, N)
-				* rhs.topLeftCorner(N, N) + lhs.bottomRightCorner(N, N)
-				* rhs.bottomLeftCorner(N, N);
+			if (sweep_direction == 1)
+				time_displaced_gf = lhs.bottomLeftCorner(N, N)
+					* rhs.topLeftCorner(N, N) + lhs.bottomRightCorner(N, N)
+					* rhs.bottomLeftCorner(N, N);
+			else
+				time_displaced_gf = lhs.topLeftCorner(N, N)
+					* rhs.topRightCorner(N, N) + lhs.topRightCorner(N, N)
+					* rhs.bottomRightCorner(N, N);
 			
 			equal_time_gf = lhs.bottomLeftCorner(N, N) * rhs.topRightCorner(N, N)
 				+ lhs.bottomRightCorner(N, N) * rhs.bottomRightCorner(N, N);
@@ -182,6 +188,7 @@ class qr_stabilizer
 	private:
 		measurements& measure;
 		bool update_time_displaced_gf;
+		int sweep_direction;
 		int n_intervals;
 		dmatrix_t& equal_time_gf;
 		dmatrix_t& time_displaced_gf;

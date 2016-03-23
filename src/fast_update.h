@@ -172,10 +172,10 @@ class fast_update
 			return current_vertex;
 		}
 
-		void enable_time_displaced_gf()
+		void enable_time_displaced_gf(int direction)
 		{
 			update_time_displaced_gf = true;
-			stabilizer.enable_time_displaced_gf();
+			stabilizer.enable_time_displaced_gf(direction);
 		}
 
 		void disable_time_displaced_gf()
@@ -398,8 +398,8 @@ class fast_update
 			{
 				// Wrap time displaced gf forwards
 				if (bond_list[current_vertex - 1] > 0)
-					time_displaced_gf = inv_vertex_matrix(current_vertex)
-						* time_displaced_gf;
+					time_displaced_gf = time_displaced_gf
+						* vertex_matrix(current_vertex);
 			}
 			//else
 			{
@@ -460,6 +460,8 @@ class fast_update
 			const std::vector<double>& time_grid, std::vector<double>& dyn_tau,
 			const std::function<double(const dmatrix_t&)>&& get_obs)
 		{
+			// 1 = forward, -1 = backward
+			int direction = current_vertex == 0 ? 1 : -1;
 			// Time grid for Matsubara frequency measurement
 			std::vector<std::vector<double>> random_times(n_max);
 			for (auto& vec : random_times)
@@ -468,14 +470,14 @@ class fast_update
 				std::for_each(vec.begin(), vec.end(), [&](double& t)
 					{ t = rng() * param.beta; } );
 				std::sort(vec.begin(), vec.end());
-				vec[0] = 0.;
-				vec[vec.size() - 1] = param.beta;
+				vec.front() = 0.;
+				vec.back() = param.beta;
 			}
 			// Time grid for imaginary time measurement
 			std::vector<int> time_pos(time_grid.size(), 0);
 			assign_random_times(time_grid, time_pos);
 			
-			enable_time_displaced_gf();
+			enable_time_displaced_gf(direction);
 			time_displaced_gf = equal_time_gf;
 			int dtau = 0, m = 0, t = 0;
 			for (int n = 0; n <= n_max_order; ++n)
@@ -502,14 +504,22 @@ class fast_update
 					}
 					++dtau;
 				}
-				if (n < n_max_order)
+				if (direction == 1 && current_vertex < n_max_order)
 				{
 					advance_forward();
 					stabilize_forward();
 				}
+				else if (direction == -1 && current_vertex > 0)
+				{
+					advance_backward();
+					stabilize_backward();
+				}
 			}
 			disable_time_displaced_gf();
-			current_vertex = 0;
+			if (direction == 1)
+				current_vertex = 0;
+			else if (direction == -1)
+				current_vertex = n_max_order;
 		}
 		
 		const dmatrix_t& measure_time_displaced_gf()

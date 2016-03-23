@@ -44,6 +44,7 @@ marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 
 filelist = []
 filelist.append(glob.glob("../bin/job/*.out"))
+filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
 filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T1.0/*task*.out"))
 filelist.sort()
 ed_data = pylab.loadtxt(glob.glob("../data/ed*")[0])
@@ -79,14 +80,17 @@ for f in filelist:
 
 		ax1.set_xlabel(r"$\omega_n$")
 		ax1.set_ylabel(r"$M_2(\omega_n) \cdot \omega_n^2$")
-		ax1.plot(x_mat, y_mat * x_mat**2., marker="o", color="green", markersize=10.0, linewidth=2.0)
-		(_, caps, _) = ax1.errorbar(x_mat, y_mat * x_mat**2., yerr=err_mat * x_mat**2., marker='None', capsize=8, color="green")
+		ax1.plot(x_mat, y_mat, marker="o", color="green", markersize=10.0, linewidth=2.0)
+		(_, caps, _) = ax1.errorbar(x_mat, y_mat, yerr=err_mat, marker='None', capsize=8, color="green")
+		#ax1.plot(x_mat, y_mat * x_mat**2., marker="o", color="green", markersize=10.0, linewidth=2.0)
+		#(_, caps, _) = ax1.errorbar(x_mat, y_mat * x_mat**2., yerr=err_mat * x_mat**2., marker='None', capsize=8, color="green")
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
 		for j in range(len(ed_data)):
 			if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
-				ax1.plot(np.array(range(0, n_ed_mat)) * 2. * np.pi * T, -ed_data[j,11+n_ed_tau:] * ((np.array(range(0, n_ed_mat)) * 2.) * np.pi * T)**2., marker='o', color="r", markersize=10.0, linewidth=2.0)
-			
+				#ax1.plot(np.array(range(0, n_ed_mat)) * 2. * np.pi * T, ed_data[j,11+n_ed_tau:] * ((np.array(range(0, n_ed_mat)) * 2.) * np.pi * T)**2., marker='o', color="r", markersize=10.0, linewidth=2.0)
+				ax1.plot(np.array(range(0, n_ed_mat)) * 2. * np.pi * T, ed_data[j,11+n_ed_tau:], marker='o', color="r", markersize=10.0, linewidth=2.0)
+
 		ax2.set_xlabel(r"$\tau$")
 		ax2.set_ylabel(r"$M_2(\tau)$")
 		ax2.set_yscale("log")
@@ -99,13 +103,13 @@ for f in filelist:
 				ax2.plot(np.linspace(0., 1./T/2., n_ed_tau + 1), ed_data[j,9:10+n_ed_tau], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 		try:
-			nmin = len(x_tau)/8; nmax = len(x_tau)*2/3
+			nmin = len(x_tau)/8; nmax = len(x_tau)*5/8
 			parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 			px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
 			ax2.plot(px, FitFunction(px, *parameter), 'k-', linewidth=3.0)
 			d = -int(np.log10(abs(perr[2])))+2
-			ax2.text(0.05, 0.98, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(parameter[2]) + "(" + str(round(perr[2], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
-			ax2.text(0.05, 0.92, r"$\Delta_{ED} = 0.9264$", transform=ax2.transAxes, fontsize=20, va='top')
+			ax2.text(0.10, 0.98, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(parameter[2]) + "(" + str(round(perr[2], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
+			#ax2.text(0.05, 0.92, r"$\Delta_{ED} = 0.9264$", transform=ax2.transAxes, fontsize=20, va='top')
 			print parameter
 			print perr
 		except:
