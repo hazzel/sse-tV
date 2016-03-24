@@ -44,8 +44,9 @@ marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 
 filelist = []
 filelist.append(glob.glob("../bin/job/*.out"))
+filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.2/*task*.out"))
 filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
-filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T1.0/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T1.0/*task*.out"))
 filelist.sort()
 ed_data = pylab.loadtxt(glob.glob("../data/ed*")[0])
 
@@ -73,23 +74,33 @@ for f in filelist:
 		x_tau = np.array(range(0, n_discrete_tau + 1)) / float(n_discrete_tau) / T / 2.
 		y_tau = np.array(ArrangePlot(elist[i], "dynamical_M2_tau")[0])
 		err_tau = np.array(ArrangePlot(elist[i], "dynamical_M2_tau")[1])
+		N_bootstrap = 50
 		x_delta = np.array(range(1, n_matsubara))
-		y_delta = np.zeros(n_matsubara - 1)
-		for n in range(1, n_matsubara):
-			y_delta[n-1] = estimator(n, 1./T, y_mat)
+		y_delta = []
+		for j in range(N_bootstrap):
+			y_delta.append(np.zeros(n_matsubara - 1))
+			y_boot = np.zeros(n_matsubara)
+			for k in range(len(y_boot)):
+				y_boot[k] = y_mat[k] + np.random.normal(0., 0.01 * abs(y_mat[k]))
+			for n in range(1, n_matsubara):
+				y_delta[j][n-1] = estimator(n, 1./T, y_boot)
 
 		ax1.set_xlabel(r"$\omega_n$")
 		ax1.set_ylabel(r"$M_2(\omega_n) \cdot \omega_n^2$")
-		ax1.plot(x_mat, y_mat, marker="o", color="green", markersize=10.0, linewidth=2.0)
-		(_, caps, _) = ax1.errorbar(x_mat, y_mat, yerr=err_mat, marker='None', capsize=8, color="green")
-		#ax1.plot(x_mat, y_mat * x_mat**2., marker="o", color="green", markersize=10.0, linewidth=2.0)
-		#(_, caps, _) = ax1.errorbar(x_mat, y_mat * x_mat**2., yerr=err_mat * x_mat**2., marker='None', capsize=8, color="green")
+		xscale = np.copy(x_mat)
+		xscale[0] = 1.
+		xscale = xscale**2.
+		ax1.plot(x_mat, y_mat * xscale, marker="o", color="green", markersize=10.0, linestyle="None", linewidth=0.0)
+		(_, caps, _) = ax1.errorbar(x_mat, y_mat * xscale, yerr=err_mat * xscale, marker='None', capsize=8, color="green")
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
 		for j in range(len(ed_data)):
 			if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
-				#ax1.plot(np.array(range(0, n_ed_mat)) * 2. * np.pi * T, ed_data[j,11+n_ed_tau:] * ((np.array(range(0, n_ed_mat)) * 2.) * np.pi * T)**2., marker='o', color="r", markersize=10.0, linewidth=2.0)
-				ax1.plot(np.array(range(0, n_ed_mat)) * 2. * np.pi * T, ed_data[j,11+n_ed_tau:], marker='o', color="r", markersize=10.0, linewidth=2.0)
+				x_mat = np.array(range(0, n_ed_mat)) * 2. * np.pi * T
+				xscale = np.copy(x_mat)
+				xscale[0] = 1.
+				xscale = xscale**2.
+				ax1.plot(x_mat, ed_data[j,11+n_ed_tau:] * xscale, marker='o', color="r", markersize=10.0, linewidth=2.0)
 
 		ax2.set_xlabel(r"$\tau$")
 		ax2.set_ylabel(r"$M_2(\tau)$")
@@ -117,7 +128,11 @@ for f in filelist:
 		
 		ax3.set_xlabel(r"$n$")
 		ax3.set_ylabel(r"$\Delta_n$")
-		ax3.plot(x_delta, y_delta, marker="o", color="green", markersize=10.0, linewidth=2.0)
+		ax3.plot(x_delta, np.mean(y_delta, axis=0), marker="o", color="green", markersize=10.0, linewidth=2.0)
+		(_, caps, _) = ax3.errorbar(x_delta, np.mean(y_delta, axis=0), yerr=np.std(y_delta, axis=0), marker="None", color="green", markersize=10.0, linewidth=2.0)
+		for cap in caps:
+			cap.set_markeredgewidth(1.4)
+
 		for j in range(len(ed_data)):
 			if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
 				x_delta = np.array(range(1, n_ed_mat))

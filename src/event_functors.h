@@ -41,8 +41,8 @@ struct event_max_order
 
 struct event_dynamic_measurement
 {
-	typedef std::function<double(const fast_update<qr_stabilizer>::dmatrix_t&)>
-		function_t;
+	typedef std::function<double(const fast_update<qr_stabilizer>::dmatrix_t&,
+		Random&, const lattice&, const parameters&)> function_t;
 
 	configuration& config;
 	Random& rng;
@@ -60,18 +60,37 @@ struct event_dynamic_measurement
 		for (int t = 0; t < time_grid.size(); ++t)
 			time_grid[t] = static_cast<double>(t) / static_cast<double>(2*config.
 				param.n_discrete_tau) * config.param.beta;
-		dyn_mat.push_back(std::vector<double>(config.param.n_matsubara, 0.));
-		dyn_tau.push_back(std::vector<double>(2 * config.param.n_discrete_tau
-			+ 1, 0.));
+		for (int i = 0; i < 2; ++i)
+		{
+			dyn_mat.push_back(std::vector<double>(config.param.n_matsubara, 0.));
+			dyn_tau.push_back(std::vector<double>(2 * config.param.n_discrete_tau
+				+ 1, 0.));
+		}
 		dyn_tau_avg.resize(config.param.n_discrete_tau + 1);
-		obs.emplace_back([this] (const fast_update<qr_stabilizer>::dmatrix_t& gf)
+		obs.emplace_back([] (const fast_update<qr_stabilizer>::dmatrix_t& gf,
+			Random& rng, const lattice& l, const parameters& param)
 			{
-				double M2 = 0.; int i = rng() * config.l.n_sites();
-				for (int j = 0; j < config.l.n_sites(); ++j)
-					M2 += gf(i, j) * gf(i, j) / config.l.n_sites();
+				double M2 = 0.; int i = rng() * l.n_sites();
+				for (int j = 0; j < l.n_sites(); ++j)
+					M2 += gf(i, j) * gf(i, j) / l.n_sites();
 				return M2;
 			});
-		names.push_back("dynamical_M2");
+		obs.emplace_back([] (const fast_update<qr_stabilizer>::dmatrix_t& gf,
+			Random& rng, const lattice& l, const parameters& param)
+			{
+				double ep = 0.;
+				for (int i = 0; i < l.n_sites(); ++i)
+					for (int j : l.neighbors(i, "nearest neighbors"))
+						for (int m = 0; m < l.n_sites(); ++m)
+							for (int n : l.neighbors(m, "nearest neighbors"))
+							{
+								double d_in = (i == n) ? 1. : 0.;
+								ep += gf(j, i)*gf(n, m) + (d_in - gf(n, i))*gf(j, m);
+							}
+				return ep;
+			});
+		names.push_back("dyn_M2");
+		names.push_back("dyn_epsilon");
 	}
 
 	void trigger()
@@ -81,17 +100,8 @@ struct event_dynamic_measurement
 			std::fill(dyn_mat[i].begin(), dyn_mat[i].end(), 0.);
 			std::fill(dyn_tau[i].begin(), dyn_tau[i].end(), 0.);
 		}
-//		config.M.measure_dynamical_observable(config.param.n_matsubara, time_grid,
-//			dyn_mat, dyn_tau, obs);
 		config.M.measure_dynamical_observable(config.param.n_matsubara, time_grid,
-			dyn_mat, dyn_tau, [this] (const fast_update<qr_stabilizer>::
-			dmatrix_t& gf)
-			{
-				double M2 = 0.; int i = rng() * config.l.n_sites();
-				for (int j = 0; j < config.l.n_sites(); ++j)
-					M2 += gf(i, j) * gf(i, j) / config.l.n_sites();
-				return M2;
-			});
+			dyn_mat, dyn_tau, obs);
 
 		for (int i = 0; i < dyn_mat.size(); ++i)
 		{
