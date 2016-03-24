@@ -456,14 +456,17 @@ class fast_update
 					* equal_time_gf(i, j) * equal_time_gf(i, j);
 		}
 
-		void measure_dynamical_observable(int n_max, std::vector<double>& dyn_mat,
-			const std::vector<double>& time_grid, std::vector<double>& dyn_tau,
-			const std::function<double(const dmatrix_t&)>&& get_obs)
+		void measure_dynamical_observable(int omega_n_max,
+			const std::vector<double>& time_grid,
+			std::vector<std::vector<double>>& dyn_mat,
+			std::vector<std::vector<double>>& dyn_tau,
+			std::function<double(const dmatrix_t&)> get_obs)
+			//const std::vector<std::function<double(const dmatrix_t&)>>& get_obs)
 		{
 			// 1 = forward, -1 = backward
 			int direction = current_vertex == 0 ? 1 : -1;
 			// Time grid for Matsubara frequency measurement
-			std::vector<std::vector<double>> random_times(n_max);
+			std::vector<std::vector<double>> random_times(omega_n_max);
 			for (auto& vec : random_times)
 			{
 				vec.resize(n_non_ident[0] + n_non_ident[1] + 2);
@@ -479,30 +482,35 @@ class fast_update
 			
 			enable_time_displaced_gf(direction);
 			time_displaced_gf = equal_time_gf;
-			int dtau = 0, m = 0, t = 0;
+			int tau_pt = 0, pos_pt = 0, t = 0;
 			for (int n = 0; n <= n_max_order; ++n)
 			{
 				if (current_vertex == 0 || (current_vertex > 0 &&
 					bond_list[current_vertex - 1] > 0))
 				{
 					// Matsubara frequency measurement
-					dyn_mat[0] += get_obs(time_displaced_gf)
-						* (random_times[0][t+1] - random_times[0][t]);
-					for (int omega_n = 1; omega_n < n_max; ++omega_n)
+					for (int i = 0; i < dyn_mat.size(); ++i)
 					{
-						double omega = 2. * 4.*std::atan(1.) * omega_n / param.beta;
-						dyn_mat[omega_n] += get_obs(time_displaced_gf)
-							* (std::sin(omega * random_times[omega_n][t+1])
-							- std::sin(omega * random_times[omega_n][t])) / omega;
+						if (omega_n_max > 0)
+							dyn_mat[i][0] += get_obs(time_displaced_gf)
+								* (random_times[0][t+1] - random_times[0][t]);
+						for (int omega_n = 1; omega_n < omega_n_max; ++omega_n)
+						{
+							double omega = 2.*4.*std::atan(1.) * omega_n / param.beta;
+							dyn_mat[i][omega_n] += get_obs(time_displaced_gf)
+								* (std::sin(omega * random_times[omega_n][t+1])
+								- std::sin(omega * random_times[omega_n][t])) / omega;
+						}
 					}
 					++t;
 					// Imaginary time measurement
-					while (m < time_pos.size() && dtau == time_pos[m])
+					while (pos_pt < time_pos.size() && tau_pt == time_pos[pos_pt])
 					{
-						dyn_tau[m] = get_obs(time_displaced_gf);
-						++m;
+						for (int i = 0; i < dyn_tau.size(); ++i)
+							dyn_tau[i][pos_pt] = get_obs(time_displaced_gf);
+						++pos_pt;
 					}
-					++dtau;
+					++tau_pt;
 				}
 				if (direction == 1 && current_vertex < n_max_order)
 				{

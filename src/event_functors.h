@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include "measurements.h"
 #include "configuration.h"
 
@@ -38,33 +39,68 @@ struct event_max_order
 	}
 };
 
-struct event_dyn_M2
+struct event_dynamic_measurement
 {
+	typedef std::function<double(const fast_update<qr_stabilizer>::dmatrix_t&)>
+		function_t;
+
 	configuration& config;
 	Random& rng;
+	std::vector<double> time_grid;
+	std::vector<std::vector<double>> dyn_mat;
+	std::vector<std::vector<double>> dyn_tau;
+	std::vector<double> dyn_tau_avg;
+	std::vector<function_t> obs;
+	std::vector<std::string> names;
 
-	void trigger()
+	event_dynamic_measurement(configuration& config_, Random& rng_)
+		: config(config_), rng(rng_)
 	{
-		std::vector<double> dyn_M2_mat(config.param.n_matsubara, 0.);
-		std::vector<double> time_grid(2 * config.param.n_discrete_tau + 1);
+		time_grid.resize(2 * config.param.n_discrete_tau + 1);
 		for (int t = 0; t < time_grid.size(); ++t)
 			time_grid[t] = static_cast<double>(t) / static_cast<double>(2*config.
 				param.n_discrete_tau) * config.param.beta;
-		std::vector<double> dyn_M2_tau(time_grid.size(), 0.);
-		config.M.measure_dynamical_observable(config.param.n_matsubara,
-			dyn_M2_mat, time_grid, dyn_M2_tau,
-			[&] (const fast_update<qr_stabilizer>::dmatrix_t& gf)
+		dyn_mat.push_back(std::vector<double>(config.param.n_matsubara, 0.));
+		dyn_tau.push_back(std::vector<double>(2 * config.param.n_discrete_tau
+			+ 1, 0.));
+		dyn_tau_avg.resize(config.param.n_discrete_tau + 1);
+		obs.emplace_back([this] (const fast_update<qr_stabilizer>::dmatrix_t& gf)
 			{
 				double M2 = 0.; int i = rng() * config.l.n_sites();
 				for (int j = 0; j < config.l.n_sites(); ++j)
 					M2 += gf(i, j) * gf(i, j) / config.l.n_sites();
 				return M2;
 			});
-		std::vector<double> dyn_M2_tau_avg(config.param.n_discrete_tau + 1);
-		for (int i = 0; i < dyn_M2_tau_avg.size(); ++i)
-			dyn_M2_tau_avg[i] = (dyn_M2_tau[i] + dyn_M2_tau[dyn_M2_tau.size()
-				- 1 - i]) / 2.;
-		config.measure.add("dynamical_M2_mat", dyn_M2_mat);
-		config.measure.add("dynamical_M2_tau", dyn_M2_tau_avg);
+		names.push_back("dynamical_M2");
+	}
+
+	void trigger()
+	{
+		for (int i = 0; i < dyn_mat.size(); ++i)
+		{
+			std::fill(dyn_mat[i].begin(), dyn_mat[i].end(), 0.);
+			std::fill(dyn_tau[i].begin(), dyn_tau[i].end(), 0.);
+		}
+//		config.M.measure_dynamical_observable(config.param.n_matsubara, time_grid,
+//			dyn_mat, dyn_tau, obs);
+		config.M.measure_dynamical_observable(config.param.n_matsubara, time_grid,
+			dyn_mat, dyn_tau, [this] (const fast_update<qr_stabilizer>::
+			dmatrix_t& gf)
+			{
+				double M2 = 0.; int i = rng() * config.l.n_sites();
+				for (int j = 0; j < config.l.n_sites(); ++j)
+					M2 += gf(i, j) * gf(i, j) / config.l.n_sites();
+				return M2;
+			});
+
+		for (int i = 0; i < dyn_mat.size(); ++i)
+		{
+			config.measure.add(names[i]+"_mat", dyn_mat[i]);
+			// Average imaginary time measurements from 0..beta/2 and beta/2..beta
+			for (int j = 0; j < dyn_tau_avg.size(); ++j)
+				dyn_tau_avg[j] = (dyn_tau[i][j] + dyn_tau[i][dyn_tau[i].size() - 1
+					- j]) / 2.;
+			config.measure.add(names[i]+"_tau", dyn_tau_avg);
+		}
 	}
 };
