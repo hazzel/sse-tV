@@ -85,7 +85,8 @@ struct event_dynamic_measurement
 							for (int n : l.neighbors(m, "nearest neighbors"))
 							{
 								double d_in = (i == n) ? 1. : 0.;
-								ep += gf(j, i)*gf(n, m) + (d_in - gf(n, i))*gf(j, m);
+								ep += (gf(j, i)*gf(n, m) + (d_in - gf(n, i))*gf(j, m))
+									/ std::pow(l.n_bonds(), 2);
 							}
 				return ep;
 			});

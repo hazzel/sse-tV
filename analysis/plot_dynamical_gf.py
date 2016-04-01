@@ -44,11 +44,11 @@ marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 
 filelist = []
 filelist.append(glob.glob("../bin/job/*.out"))
-filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.2/*task*.out"))
-filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.2/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T1.0/*task*.out"))
 filelist.sort()
-ed_data = pylab.loadtxt(glob.glob("../data/ed*")[0])
+ed_data = np.atleast_2d(pylab.loadtxt(glob.glob("../../ctint/data/ed*T_0.15*_0.15*")[0]))
 
 filelist = [item for sublist in filelist for item in sublist]
 for f in filelist:
@@ -62,19 +62,20 @@ for f in filelist:
 		h = float(plist[i]["V"])
 		T = float(plist[i]["T"])
 		L = float(plist[i]["L"])
-		for j in range(len(ed_data)):
+		for j in range(ed_data.shape[0]):
 			if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
 				n_ed_tau = int(ed_data[j,8])
-				n_ed_mat = int(ed_data[j,10+n_ed_tau])
+				n_ed_mat = int(ed_data[j,9])
+				ed_n = j
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
 		x_mat = (np.array(range(0, n_matsubara)) * 2.) * np.pi * T
-		y_mat = np.array(ArrangePlot(elist[i], "dynamical_M2_mat")[0])
-		err_mat = np.array(ArrangePlot(elist[i], "dynamical_M2_mat")[1])
+		y_mat = np.array(ArrangePlot(elist[i], "dyn_epsilon_mat")[0])
+		err_mat = np.array(ArrangePlot(elist[i], "dyn_epsilon_mat")[1])
 		x_tau = np.array(range(0, n_discrete_tau + 1)) / float(n_discrete_tau) / T / 2.
-		y_tau = np.array(ArrangePlot(elist[i], "dynamical_M2_tau")[0])
-		err_tau = np.array(ArrangePlot(elist[i], "dynamical_M2_tau")[1])
-		N_bootstrap = 50
+		y_tau = np.array(ArrangePlot(elist[i], "dyn_epsilon_tau")[0])
+		err_tau = np.array(ArrangePlot(elist[i], "dyn_epsilon_tau")[1])
+		N_bootstrap = 5
 		x_delta = np.array(range(1, n_matsubara))
 		y_delta = []
 		for j in range(N_bootstrap):
@@ -94,13 +95,11 @@ for f in filelist:
 		(_, caps, _) = ax1.errorbar(x_mat, y_mat * xscale, yerr=err_mat * xscale, marker='None', capsize=8, color="green")
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
-		for j in range(len(ed_data)):
-			if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
-				x_mat = np.array(range(0, n_ed_mat)) * 2. * np.pi * T
-				xscale = np.copy(x_mat)
-				xscale[0] = 1.
-				xscale = xscale**2.
-				ax1.plot(x_mat, ed_data[j,11+n_ed_tau:] * xscale, marker='o', color="r", markersize=10.0, linewidth=2.0)
+			x_mat = np.array(range(0, n_ed_mat)) * 2. * np.pi * T
+			xscale = np.copy(x_mat)
+			xscale[0] = 1.
+			xscale = xscale**2.
+			ax1.plot(x_mat, ed_data[ed_n,11+n_ed_tau:12+n_ed_tau+n_ed_mat] * xscale, marker='o', color="r", markersize=10.0, linewidth=2.0)
 
 		ax2.set_xlabel(r"$\tau$")
 		ax2.set_ylabel(r"$M_2(\tau)$")
@@ -109,9 +108,7 @@ for f in filelist:
 		(_, caps, _) = ax2.errorbar(x_tau, y_tau, yerr=err_tau, marker='None', capsize=8, color="green")
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
-		for j in range(len(ed_data)):
-			if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
-				ax2.plot(np.linspace(0., 1./T/2., n_ed_tau + 1), ed_data[j,9:10+n_ed_tau], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
+		ax2.plot(np.linspace(0., 1./T/2., n_ed_tau + 1), ed_data[ed_n,10:11+n_ed_tau], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 		try:
 			nmin = len(x_tau)/8; nmax = len(x_tau)*5/8
@@ -133,15 +130,11 @@ for f in filelist:
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
 
-		for j in range(len(ed_data)):
-			if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
-				x_delta = np.array(range(1, n_ed_mat))
-				y_delta = np.zeros(n_ed_mat - 1)
-				for n in range(1, n_ed_mat):
-					for j in range(len(ed_data)):
-						if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
-							y_delta[n-1] = estimator(n, 1./T, -ed_data[j,11+n_ed_tau:])
-				ax3.plot(x_delta, y_delta, marker="o", color="red", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
+		x_delta = np.array(range(1, n_ed_mat))
+		y_delta = np.zeros(n_ed_mat - 1)
+		for n in range(1, n_ed_mat):
+			y_delta[n-1] = estimator(n, 1./T, ed_data[ed_n,11+n_ed_tau:12+n_ed_tau+n_ed_mat])
+		ax3.plot(x_delta, y_delta, marker="o", color="red", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 	plt.tight_layout()
 plt.show()
