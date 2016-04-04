@@ -176,8 +176,12 @@ class qr_stabilizer
 					* rhs.topRightCorner(N, N) + lhs.topRightCorner(N, N)
 					* rhs.bottomRightCorner(N, N);
 			
+			dmatrix_t old_gf = equal_time_gf;
 			equal_time_gf = lhs.bottomLeftCorner(N, N) * rhs.topRightCorner(N, N)
 				+ lhs.bottomRightCorner(N, N) * rhs.bottomRightCorner(N, N);
+			if ((old_gf - equal_time_gf).norm() > 0.0000001)
+				std::cout << "error in stab: " << (old_gf - equal_time_gf).norm()
+					<< std::endl;
 		}
 	private:
 		void print_matrix(const dmatrix_t& m)

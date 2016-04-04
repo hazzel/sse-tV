@@ -41,8 +41,9 @@ struct event_max_order
 
 struct event_dynamic_measurement
 {
-	typedef std::function<double(const fast_update<qr_stabilizer>::dmatrix_t&,
-		Random&, const lattice&, const parameters&)> function_t;
+	typedef fast_update<qr_stabilizer>::dmatrix_t matrix_t;
+	typedef std::function<double(const matrix_t&, const matrix_t&, Random&,
+		const lattice&, const parameters&)> function_t;
 
 	configuration& config;
 	Random& rng;
@@ -60,23 +61,28 @@ struct event_dynamic_measurement
 		for (int t = 0; t < time_grid.size(); ++t)
 			time_grid[t] = static_cast<double>(t) / static_cast<double>(2*config.
 				param.n_discrete_tau) * config.param.beta;
-		for (int i = 0; i < 2; ++i)
+		for (int i = 0; i < 3; ++i)
 		{
 			dyn_mat.push_back(std::vector<double>(config.param.n_matsubara, 0.));
 			dyn_tau.push_back(std::vector<double>(2 * config.param.n_discrete_tau
 				+ 1, 0.));
 		}
 		dyn_tau_avg.resize(config.param.n_discrete_tau + 1);
-		obs.emplace_back([] (const fast_update<qr_stabilizer>::dmatrix_t& gf,
-			Random& rng, const lattice& l, const parameters& param)
+		// M2(tau) = sum_ij <(n_i(tau) - 1/2)(n_j - 1/2)>
+		obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
+			time_displaced_gf, Random& rng, const lattice& l,
+			const parameters& param)
 			{
 				double M2 = 0.; int i = rng() * l.n_sites();
 				for (int j = 0; j < l.n_sites(); ++j)
-					M2 += gf(i, j) * gf(i, j) / l.n_sites();
+					M2 += time_displaced_gf(i, j) * time_displaced_gf(i, j)
+						/ l.n_sites();
 				return M2;
 			});
-		obs.emplace_back([] (const fast_update<qr_stabilizer>::dmatrix_t& gf,
-			Random& rng, const lattice& l, const parameters& param)
+		// ep(tau) = sum_{<ij>,<mn>} <c_i^dag(tau) c_j(tau) c_n^dag c_m>
+		obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
+			time_displaced_gf, Random& rng, const lattice& l,
+			const parameters& param)
 			{
 				double ep = 0.;
 				for (int i = 0; i < l.n_sites(); ++i)
@@ -84,14 +90,45 @@ struct event_dynamic_measurement
 						for (int m = 0; m < l.n_sites(); ++m)
 							for (int n : l.neighbors(m, "nearest neighbors"))
 							{
-								double d_in = (i == n) ? 1. : 0.;
-								ep += (gf(j, i)*gf(n, m) + (d_in - gf(n, i))*gf(j, m))
+								/*
+								ep += ((equal_time_gf(j, i) - 1.) * equal_time_gf(m, n)
+									- time_displaced_gf(m, i) * time_displaced_gf(j, n))
+									/ std::pow(l.n_bonds(), 2);
+								*/
+								/*
+								double d_im = (i == m) ? 1. : 0.;
+								ep += (time_displaced_gf(j, i) * time_displaced_gf(m, n)
+									+ (d_im - time_displaced_gf(m, i))
+									* time_displaced_gf(j, n))/std::pow(l.n_bonds(), 2);
+								*/
+								//ep += ((equal_time_gf(j, i)-1.)*equal_time_gf(m, n)
+								//	- time_displaced_gf(m, i)*time_displaced_gf(j, n))
+								//	/ std::pow(l.n_bonds(), 2);
+								ep += -time_displaced_gf(m, i)*time_displaced_gf(j, n)
 									/ std::pow(l.n_bonds(), 2);
 							}
 				return ep;
 			});
+		// sp(tau) = sum_ij e^{-i K (r_i - r_j)} <c_i(tau) c_j^dag>
+		obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
+			time_displaced_gf, Random& rng, const lattice& l,
+			const parameters& param)
+			{
+				double sp = 0.;
+				Eigen::Vector2d K(1./(3.*std::sqrt(3.)), 1./3.);
+				for (int i = 0; i < l.n_sites(); ++i)
+					for (int j = 0; j < l.n_sites(); ++j)
+					{
+						auto& r_i = l.real_space_coord(i);
+						auto& r_j = l.real_space_coord(j);
+						sp += std::cos(K.dot(r_j - r_i)) * time_displaced_gf(i, j)
+							/ std::pow(l.n_sites(), 2);
+					}
+				return sp;
+			});
 		names.push_back("dyn_M2");
 		names.push_back("dyn_epsilon");
+		names.push_back("dyn_sp");
 	}
 
 	void trigger()

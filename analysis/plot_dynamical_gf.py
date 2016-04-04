@@ -69,12 +69,13 @@ for f in filelist:
 				ed_n = j
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
+		obs = "M2"
 		x_mat = (np.array(range(0, n_matsubara)) * 2.) * np.pi * T
-		y_mat = np.array(ArrangePlot(elist[i], "dyn_epsilon_mat")[0])
-		err_mat = np.array(ArrangePlot(elist[i], "dyn_epsilon_mat")[1])
+		y_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[0])
+		err_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[1])
 		x_tau = np.array(range(0, n_discrete_tau + 1)) / float(n_discrete_tau) / T / 2.
-		y_tau = np.array(ArrangePlot(elist[i], "dyn_epsilon_tau")[0])
-		err_tau = np.array(ArrangePlot(elist[i], "dyn_epsilon_tau")[1])
+		y_tau = np.abs(np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]))
+		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
 		N_bootstrap = 5
 		x_delta = np.array(range(1, n_matsubara))
 		y_delta = []

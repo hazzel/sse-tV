@@ -73,6 +73,10 @@ mc::mc(const std::string& dir)
 		config.param.n_matsubara, n_prebin);
 	config.measure.add_vectorobservable("dyn_epsilon_tau",
 		config.param.n_discrete_tau + 1, n_prebin);
+	config.measure.add_vectorobservable("dyn_sp_mat",
+		config.param.n_matsubara, n_prebin);
+	config.measure.add_vectorobservable("dyn_sp_tau",
+		config.param.n_discrete_tau + 1, n_prebin);
 
 	//Measure acceptance probabilities
 	config.measure.add_observable("update type 0", n_prebin * n_cycles);

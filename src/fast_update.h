@@ -380,13 +380,10 @@ class fast_update
 					time_displaced_gf = vertex_matrix(current_vertex + 1)
 						* time_displaced_gf;
 			}
-			//else
-			{
-				// Wrap equal time gf forwards
-				if (bond_list[current_vertex] > 0)
-					equal_time_gf = vertex_matrix(current_vertex + 1)
-						* equal_time_gf * inv_vertex_matrix(current_vertex + 1);
-			}
+			// Wrap equal time gf forwards
+			if (bond_list[current_vertex] > 0)
+				equal_time_gf = vertex_matrix(current_vertex + 1)
+					* equal_time_gf * inv_vertex_matrix(current_vertex + 1);
 			++current_vertex;
 		}
 		
@@ -401,13 +398,10 @@ class fast_update
 					time_displaced_gf = time_displaced_gf
 						* vertex_matrix(current_vertex);
 			}
-			//else
-			{
-				// Wrap equal time gf backwards
-				if (bond_list[current_vertex - 1] > 0)
-					equal_time_gf = inv_vertex_matrix(current_vertex)
-						* equal_time_gf * vertex_matrix(current_vertex);
-			}
+			// Wrap equal time gf backwards
+			if (bond_list[current_vertex - 1] > 0)
+				equal_time_gf = inv_vertex_matrix(current_vertex)
+					* equal_time_gf * vertex_matrix(current_vertex);
 			--current_vertex;
 		}
 		
@@ -460,8 +454,9 @@ class fast_update
 			const std::vector<double>& time_grid,
 			std::vector<std::vector<double>>& dyn_mat,
 			std::vector<std::vector<double>>& dyn_tau,
-			const std::vector<std::function<double(const dmatrix_t&, Random&,
-			const lattice&, const parameters&)>>& get_obs)
+			const std::vector<std::function<double(const dmatrix_t&,
+			const dmatrix_t&, Random&, const lattice&, const parameters&)>>&
+			get_obs)
 		{
 			// 1 = forward, -1 = backward
 			int direction = current_vertex == 0 ? 1 : -1;
@@ -493,13 +488,15 @@ class fast_update
 					{
 						// omega_n = 0 is a special case
 						if (omega_n_max > 0)
-							dyn_mat[i][0] += get_obs[i](time_displaced_gf, rng, l,
-								param) * (random_times[0][t+1] - random_times[0][t]);
+							dyn_mat[i][0] += get_obs[i](equal_time_gf,
+								time_displaced_gf, rng, l, param)
+								* (random_times[0][t+1] - random_times[0][t]);
 						for (int omega_n = 1; omega_n < omega_n_max; ++omega_n)
 						{
 							double omega = 2.*4.*std::atan(1.) * omega_n / param.beta;
-							dyn_mat[i][omega_n] += get_obs[i](time_displaced_gf, rng,
-								l, param)*(std::sin(omega * random_times[omega_n][t+1])
+							dyn_mat[i][omega_n] += get_obs[i](equal_time_gf,
+								time_displaced_gf, rng, l, param)
+								* (std::sin(omega * random_times[omega_n][t+1])
 								- std::sin(omega * random_times[omega_n][t])) / omega;
 						}
 					}
@@ -508,8 +505,8 @@ class fast_update
 					while (pos_pt < time_pos.size() && tau_pt == time_pos[pos_pt])
 					{
 						for (int i = 0; i < dyn_tau.size(); ++i)
-							dyn_tau[i][pos_pt] = get_obs[i](time_displaced_gf, rng,
-							l, param);
+							dyn_tau[i][pos_pt] = get_obs[i](equal_time_gf,
+								time_displaced_gf, rng, l, param);
 						++pos_pt;
 					}
 					++tau_pt;
