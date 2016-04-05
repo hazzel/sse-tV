@@ -222,7 +222,7 @@ void mc::do_update()
 	if (sweep == n_warmup)
 	{
 		qmc.set_proposal_rates({static_cast<double>(config.M.non_ident(0)),
-			static_cast<double>(config.M.non_ident(1))});
+			static_cast<double>(std::max(5, config.M.non_ident(1)))});
 		std::cout << "Max order set to " << config.M.max_order() << "."
 			<< std::endl;
 	}

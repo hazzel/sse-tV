@@ -59,8 +59,6 @@ filelist.append(glob.glob("../bin/job/*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T1.0/*task*.out"))
 filelist.sort()
-ed_file = open(glob.glob("../../ctint/data/ed*T_0.15*_0.15*")[0])
-ed_data = parse_ed_file(ed_file)
 
 filelist = [item for sublist in filelist for item in sublist]
 for f in filelist:
@@ -68,13 +66,16 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "sp"
+	obs = "epsilon"
 	for i in range(len(plist)):
 		n_matsubara = int(plist[i]["matsubara_freqs"])
 		n_discrete_tau = int(plist[i]["discrete_tau"])
 		h = float(plist[i]["V"])
 		T = float(plist[i]["T"])
 		L = float(plist[i]["L"])
+		#ed_file = open(glob.glob("../../ctint/data/ed*T_"+str(T)+"*V_" + str(V) + "*")[0])
+		ed_file = open(glob.glob("../../ctint/data/ed*V_" + str(h) + "*T_" + str(T) + "*")[0])
+		ed_data = parse_ed_file(ed_file)
 		n_ed_tau = int(ed_data[0][8])
 		n_ed_mat = int(ed_data[0][9])
 		if obs == "M2":
