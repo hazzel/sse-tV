@@ -7,6 +7,7 @@
 #include <string>
 #include <ostream>
 #include <iostream>
+#include <initializer_list>
 #include "Random.h"
 #include "measurements.h"
 #include "move_base.h"
@@ -86,6 +87,15 @@ class mctools
 			for (int i = 0; i < moves.size(); ++i)
 				acceptance[i].second = moves[i].acceptance_rate();
 			return acceptance;
+		}
+
+		void set_proposal_rates(std::initializer_list<double> list)
+		{
+			if (list.size() != moves.size())
+				return;
+			for (int i = 0; i < list.size(); ++i)
+				moves[i].proposal_rate(list.begin()[i]);
+			normalize_proposal_rates();
 		}
 
 		double average_sign()

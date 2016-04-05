@@ -220,8 +220,11 @@ void mc::do_update()
 	if (!is_thermalized())
 		qmc.trigger_event("max_order");
 	if (sweep == n_warmup)
+	{
+		qmc.set_proposal_rates({config.M.non_ident(0), config.M.non_ident(1)});
 		std::cout << "Max order set to " << config.M.max_order() << "."
 			<< std::endl;
+	}
 	status();
 }
 

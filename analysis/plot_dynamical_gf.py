@@ -38,6 +38,17 @@ def estimator(n, beta, C):
 		sum2 += combinatorial_factor(n, k) * Decimal(str(C[k]))
 	return float(omega1 * abs(- sum1 / sum2).sqrt())
 
+def parse_ed_file(filename):
+	ed_data = []
+	ed_lines = ed_file.read().splitlines()
+	for line in ed_lines:
+		ed_data.append([])
+		values = filter(None, line.split("\t"))
+		for x in values:
+			ed_data[-1].append(float(x))
+		ed_data[-1] = np.array(ed_data[-1])
+	return ed_data
+
 latexify()
 color_cycle = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'orange', 'darkgreen']
 marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
@@ -48,34 +59,39 @@ filelist.append(glob.glob("../bin/job/*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T1.0/*task*.out"))
 filelist.sort()
-ed_data = np.atleast_2d(pylab.loadtxt(glob.glob("../../ctint/data/ed*T_0.15*_0.15*")[0]))
+ed_file = open(glob.glob("../../ctint/data/ed*T_0.15*_0.15*")[0])
+ed_data = parse_ed_file(ed_file)
 
 filelist = [item for sublist in filelist for item in sublist]
 for f in filelist:
 	figure, (ax1, ax2, ax3) = plt.subplots(1, 3)
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
-		
+
+	obs = "sp"
 	for i in range(len(plist)):
 		n_matsubara = int(plist[i]["matsubara_freqs"])
 		n_discrete_tau = int(plist[i]["discrete_tau"])
 		h = float(plist[i]["V"])
 		T = float(plist[i]["T"])
 		L = float(plist[i]["L"])
-		for j in range(ed_data.shape[0]):
-			if h == ed_data[j,2] and T == ed_data[j,3] and L == int(ed_data[j,1]):
-				n_ed_tau = int(ed_data[j,8])
-				n_ed_mat = int(ed_data[j,9])
-				ed_n = j
+		n_ed_tau = int(ed_data[0][8])
+		n_ed_mat = int(ed_data[0][9])
+		if obs == "M2":
+			ed_n = 1
+		elif obs == "epsilon":
+			ed_n = 3
+		elif obs == "sp":
+			ed_n = 5
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
-		obs = "M2"
 		x_mat = (np.array(range(0, n_matsubara)) * 2.) * np.pi * T
 		y_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[0])
 		err_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[1])
 		x_tau = np.array(range(0, n_discrete_tau + 1)) / float(n_discrete_tau) / T / 2.
 		y_tau = np.abs(np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]))
 		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
+			
 		N_bootstrap = 5
 		x_delta = np.array(range(1, n_matsubara))
 		y_delta = []
@@ -100,7 +116,7 @@ for f in filelist:
 			xscale = np.copy(x_mat)
 			xscale[0] = 1.
 			xscale = xscale**2.
-			ax1.plot(x_mat, ed_data[ed_n,11+n_ed_tau:12+n_ed_tau+n_ed_mat] * xscale, marker='o', color="r", markersize=10.0, linewidth=2.0)
+			ax1.plot(x_mat, ed_data[ed_n+1] * xscale, marker='o', color="r", markersize=10.0, linewidth=2.0)
 
 		ax2.set_xlabel(r"$\tau$")
 		ax2.set_ylabel(r"$M_2(\tau)$")
@@ -109,7 +125,7 @@ for f in filelist:
 		(_, caps, _) = ax2.errorbar(x_tau, y_tau, yerr=err_tau, marker='None', capsize=8, color="green")
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
-		ax2.plot(np.linspace(0., 1./T/2., n_ed_tau + 1), ed_data[ed_n,10:11+n_ed_tau], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
+		ax2.plot(np.linspace(0., 1./T/2., n_ed_tau), ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 		try:
 			nmin = len(x_tau)/8; nmax = len(x_tau)*5/8
@@ -134,7 +150,7 @@ for f in filelist:
 		x_delta = np.array(range(1, n_ed_mat))
 		y_delta = np.zeros(n_ed_mat - 1)
 		for n in range(1, n_ed_mat):
-			y_delta[n-1] = estimator(n, 1./T, ed_data[ed_n,11+n_ed_tau:12+n_ed_tau+n_ed_mat])
+			y_delta[n-1] = estimator(n, 1./T, ed_data[ed_n+1])
 		ax3.plot(x_delta, y_delta, marker="o", color="red", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 	plt.tight_layout()

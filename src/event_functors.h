@@ -85,7 +85,8 @@ struct event_dynamic_measurement
 			const parameters& param)
 			{
 				double ep = 0.;
-				for (int i = 0; i < l.n_sites(); ++i)
+				int i = rng() * l.n_sites();
+//				for (int i = 0; i < l.n_sites(); ++i)
 					for (int j : l.neighbors(i, "nearest neighbors"))
 						for (int m = 0; m < l.n_sites(); ++m)
 							for (int n : l.neighbors(m, "nearest neighbors"))
@@ -105,7 +106,7 @@ struct event_dynamic_measurement
 								//	- time_displaced_gf(m, i)*time_displaced_gf(j, n))
 								//	/ std::pow(l.n_bonds(), 2);
 								ep += -time_displaced_gf(m, i)*time_displaced_gf(j, n)
-									/ std::pow(l.n_bonds(), 2);
+									/ std::pow(l.n_bonds(), 2) * l.n_sites();
 							}
 				return ep;
 			});
@@ -116,13 +117,14 @@ struct event_dynamic_measurement
 			{
 				double sp = 0.;
 				Eigen::Vector2d K(1./(3.*std::sqrt(3.)), 1./3.);
-				for (int i = 0; i < l.n_sites(); ++i)
+				int i = rng() * l.n_sites();
+//				for (int i = 0; i < l.n_sites(); ++i)
 					for (int j = 0; j < l.n_sites(); ++j)
 					{
 						auto& r_i = l.real_space_coord(i);
 						auto& r_j = l.real_space_coord(j);
 						sp += std::cos(K.dot(r_j - r_i)) * time_displaced_gf(i, j)
-							/ std::pow(l.n_sites(), 2);
+							/ std::pow(l.n_sites(), 1);
 					}
 				return sp;
 			});
