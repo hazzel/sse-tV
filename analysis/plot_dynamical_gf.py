@@ -54,8 +54,8 @@ color_cycle = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'orange', 'darkgreen']
 marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 
 filelist = []
-filelist.append(glob.glob("../bin/job/*.out"))
-#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.2/*task*.out"))
+#filelist.append(glob.glob("../bin/job/*.out"))
+filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T1.0/*task*.out"))
 filelist.sort()
@@ -66,7 +66,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "epsilon"
+	obs = "M2"
 	for i in range(len(plist)):
 		n_matsubara = int(plist[i]["matsubara_freqs"])
 		n_discrete_tau = int(plist[i]["discrete_tau"])
@@ -74,7 +74,7 @@ for f in filelist:
 		T = float(plist[i]["T"])
 		L = float(plist[i]["L"])
 		#ed_file = open(glob.glob("../../ctint/data/ed*T_"+str(T)+"*V_" + str(V) + "*")[0])
-		ed_file = open(glob.glob("../../ctint/data/ed*V_" + str(h) + "*T_" + str(T) + "*")[0])
+		ed_file = open(glob.glob("../../ctint/data/ed*" + "L_" + str(int(L)) + "*V_" + str(h) + "*T_" + str(T) + "*")[0])
 		ed_data = parse_ed_file(ed_file)
 		n_ed_tau = int(ed_data[0][8])
 		n_ed_mat = int(ed_data[0][9])
@@ -83,7 +83,7 @@ for f in filelist:
 		elif obs == "epsilon":
 			ed_n = 3
 		elif obs == "sp":
-			ed_n = 5
+			ed_n = 3
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
 		x_mat = (np.array(range(0, n_matsubara)) * 2.) * np.pi * T

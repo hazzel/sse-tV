@@ -86,28 +86,17 @@ struct event_dynamic_measurement
 			{
 				double ep = 0.;
 				int i = rng() * l.n_sites();
-//				for (int i = 0; i < l.n_sites(); ++i)
-					for (int j : l.neighbors(i, "nearest neighbors"))
-						for (int m = 0; m < l.n_sites(); ++m)
-							for (int n : l.neighbors(m, "nearest neighbors"))
-							{
-								/*
-								ep += ((equal_time_gf(j, i) - 1.) * equal_time_gf(m, n)
-									- time_displaced_gf(m, i) * time_displaced_gf(j, n))
-									/ std::pow(l.n_bonds(), 2);
-								*/
-								/*
-								double d_im = (i == m) ? 1. : 0.;
-								ep += (time_displaced_gf(j, i) * time_displaced_gf(m, n)
-									+ (d_im - time_displaced_gf(m, i))
-									* time_displaced_gf(j, n))/std::pow(l.n_bonds(), 2);
-								*/
-								//ep += ((equal_time_gf(j, i)-1.)*equal_time_gf(m, n)
-								//	- time_displaced_gf(m, i)*time_displaced_gf(j, n))
-								//	/ std::pow(l.n_bonds(), 2);
-								ep += -time_displaced_gf(m, i)*time_displaced_gf(j, n)
-									/ std::pow(l.n_bonds(), 2) * l.n_sites();
-							}
+				for (int j : l.neighbors(i, "nearest neighbors"))	
+					for (int m = 0; m < l.n_sites(); ++m)
+						for (int n : l.neighbors(m, "nearest neighbors"))
+						{
+//							ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
+//								+ l.parity(i) * l.parity(m) * time_displaced_gf(i, m)
+//								* time_displaced_gf(j, n))
+//								/ l.n_bonds() * 2./3.;
+							ep += time_displaced_gf(i, m) * time_displaced_gf(j, n)
+								/ l.n_bonds() * 2./3.;
+						}
 				return ep;
 			});
 		// sp(tau) = sum_ij e^{-i K (r_i - r_j)} <c_i(tau) c_j^dag>
@@ -118,14 +107,13 @@ struct event_dynamic_measurement
 				double sp = 0.;
 				Eigen::Vector2d K(1./(3.*std::sqrt(3.)), 1./3.);
 				int i = rng() * l.n_sites();
-//				for (int i = 0; i < l.n_sites(); ++i)
-					for (int j = 0; j < l.n_sites(); ++j)
-					{
-						auto& r_i = l.real_space_coord(i);
-						auto& r_j = l.real_space_coord(j);
-						sp += std::cos(K.dot(r_j - r_i)) * time_displaced_gf(i, j)
-							/ std::pow(l.n_sites(), 1);
-					}
+				for (int j = 0; j < l.n_sites(); ++j)
+				{
+					auto& r_i = l.real_space_coord(i);
+					auto& r_j = l.real_space_coord(j);
+					sp += std::cos(K.dot(r_j - r_i)) * time_displaced_gf(i, j)
+						/ l.n_sites();
+				}
 				return sp;
 			});
 		names.push_back("dyn_M2");
@@ -150,6 +138,8 @@ struct event_dynamic_measurement
 			for (int j = 0; j < dyn_tau_avg.size(); ++j)
 				dyn_tau_avg[j] = (dyn_tau[i][j] + dyn_tau[i][dyn_tau[i].size() - 1
 					- j]) / 2.;
+//				dyn_tau_avg[j] = dyn_tau[i][dyn_tau[i].size() - 1
+//					- j];
 			config.measure.add(names[i]+"_tau", dyn_tau_avg);
 		}
 	}
