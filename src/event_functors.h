@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <boost/algorithm/string.hpp>
 #include "measurements.h"
 #include "configuration.h"
 
@@ -54,71 +55,96 @@ struct event_dynamic_measurement
 	std::vector<function_t> obs;
 	std::vector<std::string> names;
 
-	event_dynamic_measurement(configuration& config_, Random& rng_)
+	event_dynamic_measurement(configuration& config_, Random& rng_, int n_prebin,
+		std::initializer_list<std::string> observables)
 		: config(config_), rng(rng_)
 	{
 		time_grid.resize(2 * config.param.n_discrete_tau + 1);
 		for (int t = 0; t < time_grid.size(); ++t)
 			time_grid[t] = static_cast<double>(t) / static_cast<double>(2*config.
 				param.n_discrete_tau) * config.param.beta;
-		for (int i = 0; i < 3; ++i)
+		for (int i = 0; i < observables.size(); ++i)
 		{
 			dyn_mat.push_back(std::vector<double>(config.param.n_matsubara, 0.));
 			dyn_tau.push_back(std::vector<double>(2 * config.param.n_discrete_tau
 				+ 1, 0.));
 		}
 		dyn_tau_avg.resize(config.param.n_discrete_tau + 1);
-		// M2(tau) = sum_ij <(n_i(tau) - 1/2)(n_j - 1/2)>
-		obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
-			time_displaced_gf, Random& rng, const lattice& l,
-			const parameters& param)
-			{
-				double M2 = 0.; int i = rng() * l.n_sites();
-				for (int j = 0; j < l.n_sites(); ++j)
-					M2 += time_displaced_gf(i, j) * time_displaced_gf(i, j)
-						/ l.n_sites();
-				return M2;
-			});
-		// ep(tau) = sum_{<ij>,<mn>} <c_i^dag(tau) c_j(tau) c_n^dag c_m>
-		obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
-			time_displaced_gf, Random& rng, const lattice& l,
-			const parameters& param)
-			{
-				double ep = 0.;
-				int i = rng() * l.n_sites();
-				for (int j : l.neighbors(i, "nearest neighbors"))	
-					for (int m = 0; m < l.n_sites(); ++m)
-						for (int n : l.neighbors(m, "nearest neighbors"))
-						{
-//							ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
-//								+ l.parity(i) * l.parity(m) * time_displaced_gf(i, m)
-//								* time_displaced_gf(j, n))
-//								/ l.n_bonds() * 2./3.;
-							ep += time_displaced_gf(i, m) * time_displaced_gf(j, n)
-								/ l.n_bonds() * 2./3.;
-						}
-				return ep;
-			});
-		// sp(tau) = sum_ij e^{-i K (r_i - r_j)} <c_i(tau) c_j^dag>
-		obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
-			time_displaced_gf, Random& rng, const lattice& l,
-			const parameters& param)
-			{
-				double sp = 0.;
-				Eigen::Vector2d K(1./(3.*std::sqrt(3.)), 1./3.);
-				int i = rng() * l.n_sites();
-				for (int j = 0; j < l.n_sites(); ++j)
+		typedef std::initializer_list<std::string> list_t;
+		if (boost::algorithm::contains(observables, list_t{"M2"}))
+		{
+			// M2(tau) = sum_ij <(n_i(tau) - 1/2)(n_j - 1/2)>
+			obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
+				time_displaced_gf, Random& rng, const lattice& l,
+				const parameters& param)
 				{
-					auto& r_i = l.real_space_coord(i);
-					auto& r_j = l.real_space_coord(j);
-					sp += std::cos(K.dot(r_j - r_i)) * time_displaced_gf(i, j)
-						/ l.n_sites();
-				}
-				return sp;
-			});
-		names.push_back("dyn_M2");
-		names.push_back("dyn_epsilon");
-		names.push_back("dyn_sp");
+					double M2 = 0.; int i = rng() * l.n_sites();
+					for (int j = 0; j < l.n_sites(); ++j)
+						M2 += time_displaced_gf(i, j) * time_displaced_gf(i, j)
+							/ l.n_sites();
+					return M2;
+				});
+			names.push_back("dyn_M2");
+			config.measure.add_vectorobservable("dyn_M2_mat",
+				config.param.n_matsubara, n_prebin);
+			config.measure.add_vectorobservable("dyn_M2_tau",
+				config.param.n_discrete_tau + 1, n_prebin);
+		}
+		if (boost::algorithm::contains(observables, list_t{"epsilon"}))
+		{
+			// ep(tau) = sum_{<ij>,<mn>} <c_i^dag(tau) c_j(tau) c_n^dag c_m>
+			obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
+				time_displaced_gf, Random& rng, const lattice& l,
+				const parameters& param)
+				{
+					double ep = 0.;
+					int i = rng() * l.n_sites();
+					for (int j : l.neighbors(i, "nearest neighbors"))	
+						for (int m = 0; m < l.n_sites(); ++m)
+							for (int n : l.neighbors(m, "nearest neighbors"))
+							{
+	//							ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
+	//								+ l.parity(i) * l.parity(m) * time_displaced_gf(i, m)
+	//								* time_displaced_gf(j, n)) / l.n_bonds() * 2./3.;
+	//							ep += time_displaced_gf(i, m) * time_displaced_gf(j, n)
+	//								/ l.n_bonds() * 2./3.;
+								ep += (time_displaced_gf(j, i) * time_displaced_gf(m, n)
+									+ l.parity(i) * l.parity(m) * time_displaced_gf(i, m)
+									* time_displaced_gf(j, n)) / l.n_bonds() * 2./3.;
+							}
+					return ep;
+				});
+			names.push_back("dyn_epsilon");
+			config.measure.add_vectorobservable("dyn_epsilon_mat",
+				config.param.n_matsubara, n_prebin);
+			config.measure.add_vectorobservable("dyn_epsilon_tau",
+				config.param.n_discrete_tau + 1, n_prebin);
+		}
+		if (boost::algorithm::contains(observables, list_t{"sp"}))
+		{
+			// sp(tau) = sum_ij e^{-i K (r_i - r_j)} <c_i(tau) c_j^dag>
+			obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
+				time_displaced_gf, Random& rng, const lattice& l,
+				const parameters& param)
+				{
+					double sp = 0.;
+					Eigen::Vector2d K(1./(3.*std::sqrt(3.)), 1./3.);
+					int i = rng() * l.n_sites();
+					for (int j = 0; j < l.n_sites(); ++j)
+					{
+						auto& r_i = l.real_space_coord(i);
+						auto& r_j = l.real_space_coord(j);
+						sp += std::cos(K.dot(r_j - r_i)) * time_displaced_gf(i, j)
+							/ l.n_sites();
+					}
+					return sp;
+				});
+			names.push_back("dyn_sp");
+			config.measure.add_vectorobservable("dyn_sp_mat",
+				config.param.n_matsubara, n_prebin);
+			config.measure.add_vectorobservable("dyn_sp_tau",
+				config.param.n_discrete_tau + 1, n_prebin);
+		}
 	}
 
 	void trigger()

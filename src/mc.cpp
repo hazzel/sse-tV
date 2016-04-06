@@ -48,12 +48,16 @@ mc::mc(const std::string& dir)
 		(lattice::vertex_t i, lattice::vertex_t j) {
 		return config.l.distance(i, j) == 1; });
 
-
 	//Set up Monte Carlo moves
 	qmc.add_move(move_update_vertex{config, rng, 0}, "update type 0",
 		config.param.prop_V1);
 	qmc.add_move(move_update_vertex{config, rng, 1}, "update type 1",
 		config.param.prop_V2);
+	
+	//Measure acceptance probabilities
+	config.measure.add_observable("update type 0", n_prebin * n_cycles);
+	config.measure.add_observable("update type 1", n_prebin * n_cycles);
+	config.measure.add_observable("sign", n_prebin * n_cycles);
 
 	//Set up measurements
 	config.measure.add_observable("M2", n_prebin);
@@ -65,23 +69,6 @@ mc::mc(const std::string& dir)
 	config.measure.add_observable("avg error", n_prebin);
 	config.measure.add_vectorobservable("<n_r n_0>", config.l.max_distance() + 1,
 		n_prebin);
-	config.measure.add_vectorobservable("dyn_M2_mat",
-		config.param.n_matsubara, n_prebin);
-	config.measure.add_vectorobservable("dyn_M2_tau",
-		config.param.n_discrete_tau + 1, n_prebin);
-	config.measure.add_vectorobservable("dyn_epsilon_mat",
-		config.param.n_matsubara, n_prebin);
-	config.measure.add_vectorobservable("dyn_epsilon_tau",
-		config.param.n_discrete_tau + 1, n_prebin);
-	config.measure.add_vectorobservable("dyn_sp_mat",
-		config.param.n_matsubara, n_prebin);
-	config.measure.add_vectorobservable("dyn_sp_tau",
-		config.param.n_discrete_tau + 1, n_prebin);
-
-	//Measure acceptance probabilities
-	config.measure.add_observable("update type 0", n_prebin * n_cycles);
-	config.measure.add_observable("update type 1", n_prebin * n_cycles);
-	config.measure.add_observable("sign", n_prebin * n_cycles);
 	
 	qmc.add_measure(measure_estimator{config, config.measure, pars,
 		std::vector<double>(config.l.max_distance() + 1, 0.0)}, "measurement");
@@ -93,7 +80,8 @@ mc::mc(const std::string& dir)
 	qmc.add_event(event_rebuild{config, config.measure}, "rebuild");
 	qmc.add_event(event_build{config, rng}, "initial build");
 	qmc.add_event(event_max_order{config, rng}, "max_order");
-	qmc.add_event(event_dynamic_measurement{config, rng}, "dyn_measure");
+	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin,
+		{"M2","epsilon","sp"}}, "dyn_measure");
 	//Initialize vertex list to reduce warm up time
 	qmc.trigger_event("initial build");
 }

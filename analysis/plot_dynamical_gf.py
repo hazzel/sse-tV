@@ -54,8 +54,9 @@ color_cycle = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'orange', 'darkgreen']
 marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 
 filelist = []
-#filelist.append(glob.glob("../bin/job/*.out"))
-filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
+filelist.append(glob.glob("../bin/job/*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L3-V1.0-T0.10/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T1.0/*task*.out"))
 filelist.sort()
@@ -66,24 +67,25 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "M2"
+	obs = "epsilon"
 	for i in range(len(plist)):
 		n_matsubara = int(plist[i]["matsubara_freqs"])
 		n_discrete_tau = int(plist[i]["discrete_tau"])
 		h = float(plist[i]["V"])
 		T = float(plist[i]["T"])
 		L = float(plist[i]["L"])
-		#ed_file = open(glob.glob("../../ctint/data/ed*T_"+str(T)+"*V_" + str(V) + "*")[0])
-		ed_file = open(glob.glob("../../ctint/data/ed*" + "L_" + str(int(L)) + "*V_" + str(h) + "*T_" + str(T) + "*")[0])
-		ed_data = parse_ed_file(ed_file)
-		n_ed_tau = int(ed_data[0][8])
-		n_ed_mat = int(ed_data[0][9])
-		if obs == "M2":
-			ed_n = 1
-		elif obs == "epsilon":
-			ed_n = 3
-		elif obs == "sp":
-			ed_n = 3
+		ed_glob = glob.glob("../../ctint/data/ed*" + "L_" + str(int(L)) + "*V_" + format(h, '.6f') + "*T_" + format(T, '.6f') + "*")
+		if len(ed_glob) > 0:
+			ed_file = open(ed_glob[0])
+			ed_data = parse_ed_file(ed_file)
+			n_ed_tau = int(ed_data[0][8])
+			n_ed_mat = int(ed_data[0][9])
+			if obs == "M2":
+				ed_n = 1
+			elif obs == "epsilon":
+				ed_n = 3
+			elif obs == "sp":
+				ed_n = 3
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
 		x_mat = (np.array(range(0, n_matsubara)) * 2.) * np.pi * T
@@ -113,6 +115,7 @@ for f in filelist:
 		(_, caps, _) = ax1.errorbar(x_mat, y_mat * xscale, yerr=err_mat * xscale, marker='None', capsize=8, color="green")
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
+		if len(ed_glob) > 0:
 			x_mat = np.array(range(0, n_ed_mat)) * 2. * np.pi * T
 			xscale = np.copy(x_mat)
 			xscale[0] = 1.
@@ -126,7 +129,8 @@ for f in filelist:
 		(_, caps, _) = ax2.errorbar(x_tau, y_tau, yerr=err_tau, marker='None', capsize=8, color="green")
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
-		ax2.plot(np.linspace(0., 1./T/2., n_ed_tau), ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
+		if len(ed_glob) > 0:
+			ax2.plot(np.linspace(0., 1./T/2., n_ed_tau), ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 		try:
 			nmin = len(x_tau)/8; nmax = len(x_tau)*5/8
@@ -148,11 +152,12 @@ for f in filelist:
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
 
-		x_delta = np.array(range(1, n_ed_mat))
-		y_delta = np.zeros(n_ed_mat - 1)
-		for n in range(1, n_ed_mat):
-			y_delta[n-1] = estimator(n, 1./T, ed_data[ed_n+1])
-		ax3.plot(x_delta, y_delta, marker="o", color="red", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
+		if len(ed_glob) > 0:
+			x_delta = np.array(range(1, n_ed_mat))
+			y_delta = np.zeros(n_ed_mat - 1)
+			for n in range(1, n_ed_mat):
+				y_delta[n-1] = estimator(n, 1./T, ed_data[ed_n+1])
+			ax3.plot(x_delta, y_delta, marker="o", color="red", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 	plt.tight_layout()
 plt.show()
