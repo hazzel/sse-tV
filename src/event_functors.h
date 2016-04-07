@@ -103,14 +103,12 @@ struct event_dynamic_measurement
 						for (int m = 0; m < l.n_sites(); ++m)
 							for (int n : l.neighbors(m, "nearest neighbors"))
 							{
-	//							ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
-	//								+ l.parity(i) * l.parity(m) * time_displaced_gf(i, m)
-	//								* time_displaced_gf(j, n)) / l.n_bonds() * 2./3.;
-	//							ep += time_displaced_gf(i, m) * time_displaced_gf(j, n)
-	//								/ l.n_bonds() * 2./3.;
-								ep += (time_displaced_gf(j, i) * time_displaced_gf(m, n)
+								ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
 									+ l.parity(i) * l.parity(m) * time_displaced_gf(i, m)
 									* time_displaced_gf(j, n)) / l.n_bonds() * 2./3.;
+								
+//								ep += equal_time_gf(j, i) * equal_time_gf(m, n)
+//									/ l.n_bonds() * 2./3.;
 							}
 					return ep;
 				});
@@ -128,7 +126,8 @@ struct event_dynamic_measurement
 				const parameters& param)
 				{
 					double sp = 0.;
-					Eigen::Vector2d K(1./(3.*std::sqrt(3.)), 1./3.);
+					double pi = 4.*std::atan(1.);
+					Eigen::Vector2d K(2.*pi/9., 2.*pi/9.*(2.-1./std::sqrt(3.)));
 					int i = rng() * l.n_sites();
 					for (int j = 0; j < l.n_sites(); ++j)
 					{

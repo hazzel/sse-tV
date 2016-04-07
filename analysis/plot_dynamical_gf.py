@@ -29,8 +29,8 @@ def combinatorial_factor(n, k):
 			prod *= (kDec + jDec) * (kDec - jDec)
 	return Decimal(1) / prod
 
-def estimator(n, beta, C):
-	omega1 = Decimal(str(2. * np.pi / beta))
+def estimator(n, beta, C, parity):
+	omega1 = Decimal(str((2. + (1.-parity)/2.) * np.pi / beta))
 	sum1 = Decimal(0)
 	sum2 = Decimal(0)
 	for k in range(n + 1):
@@ -82,20 +82,23 @@ for f in filelist:
 			n_ed_mat = int(ed_data[0][9])
 			if obs == "M2":
 				ed_n = 1
+				parity = 1.
 			elif obs == "epsilon":
 				ed_n = 3
+				parity = 1.
 			elif obs == "sp":
-				ed_n = 3
+				ed_n = 5
+				parity = 1.
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
-		x_mat = (np.array(range(0, n_matsubara)) * 2.) * np.pi * T
+		x_mat = (np.array(range(0, n_matsubara)) * 2. + (1.-parity)/2.) * np.pi * T
 		y_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[0])
 		err_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[1])
 		x_tau = np.array(range(0, n_discrete_tau + 1)) / float(n_discrete_tau) / T / 2.
 		y_tau = np.abs(np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]))
 		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
 			
-		N_bootstrap = 5
+		N_bootstrap = 50
 		x_delta = np.array(range(1, n_matsubara))
 		y_delta = []
 		for j in range(N_bootstrap):
@@ -104,7 +107,7 @@ for f in filelist:
 			for k in range(len(y_boot)):
 				y_boot[k] = y_mat[k] + np.random.normal(0., 0.01 * abs(y_mat[k]))
 			for n in range(1, n_matsubara):
-				y_delta[j][n-1] = estimator(n, 1./T, y_boot)
+				y_delta[j][n-1] = estimator(n, 1./T, y_boot, parity)
 
 		ax1.set_xlabel(r"$\omega_n$")
 		ax1.set_ylabel(r"$M_2(\omega_n) \cdot \omega_n^2$")
@@ -116,11 +119,19 @@ for f in filelist:
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
 		if len(ed_glob) > 0:
-			x_mat = np.array(range(0, n_ed_mat)) * 2. * np.pi * T
+			x_mat = (np.array(range(0, n_ed_mat)) * 2. + (1.-parity)/2.) * np.pi * T
 			xscale = np.copy(x_mat)
 			xscale[0] = 1.
 			xscale = xscale**2.
 			ax1.plot(x_mat, ed_data[ed_n+1] * xscale, marker='o', color="r", markersize=10.0, linewidth=2.0)
+			
+			ed_tau = np.linspace(0., 1./T/2., n_ed_tau + 1)
+			y_num_int = np.zeros(n_ed_mat)
+			for n in range(n_ed_mat):
+				i1 = scipy.integrate.simps(ed_data[ed_n] * np.cos(ed_tau * x_mat[n]), ed_tau)
+				i2 = scipy.integrate.simps(ed_data[ed_n] * np.cos((1./(2.*T)+ed_tau) * x_mat[n]), 1./(2.*T) + ed_tau)
+				y_num_int[n] = i1 + (-1.)**n*i2
+			ax1.plot(x_mat, y_num_int * xscale, marker='o', color="b", markersize=10.0, linewidth=2.0)
 
 		ax2.set_xlabel(r"$\tau$")
 		ax2.set_ylabel(r"$M_2(\tau)$")
@@ -130,10 +141,11 @@ for f in filelist:
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
 		if len(ed_glob) > 0:
-			ax2.plot(np.linspace(0., 1./T/2., n_ed_tau), ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
+			ax2.plot(np.linspace(0., 1./T/2., n_ed_tau + 1), ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 		try:
 			nmin = len(x_tau)/8; nmax = len(x_tau)*5/8
+			#nmin = 0; nmax = 10
 			parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 			px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
 			ax2.plot(px, FitFunction(px, *parameter), 'k-', linewidth=3.0)
@@ -156,7 +168,7 @@ for f in filelist:
 			x_delta = np.array(range(1, n_ed_mat))
 			y_delta = np.zeros(n_ed_mat - 1)
 			for n in range(1, n_ed_mat):
-				y_delta[n-1] = estimator(n, 1./T, ed_data[ed_n+1])
+				y_delta[n-1] = estimator(n, 1./T, ed_data[ed_n+1], parity)
 			ax3.plot(x_delta, y_delta, marker="o", color="red", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 	plt.tight_layout()
