@@ -57,6 +57,7 @@ filelist = []
 filelist.append(glob.glob("../bin/job/*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L3-V1.0-T0.10/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.0-T0.10/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T1.0/*task*.out"))
 filelist.sort()
@@ -67,7 +68,24 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "epsilon"
+	obs = "tp"
+	if obs == "M2":
+		ed_n = 1
+		parity = 1.
+	elif obs == "epsilon":
+		ed_n = 3
+		parity = 1.
+	elif obs == "epsilon_nn":
+		ed_n = 5
+		parity = 1.
+		obs = "epsilon"
+	elif obs == "sp":
+		ed_n = 7
+		parity = 1.
+	elif obs == "tp":
+		ed_n = 9
+		parity = 1.
+		
 	for i in range(len(plist)):
 		n_matsubara = int(plist[i]["matsubara_freqs"])
 		n_discrete_tau = int(plist[i]["discrete_tau"])
@@ -80,15 +98,7 @@ for f in filelist:
 			ed_data = parse_ed_file(ed_file)
 			n_ed_tau = int(ed_data[0][8])
 			n_ed_mat = int(ed_data[0][9])
-			if obs == "M2":
-				ed_n = 1
-				parity = 1.
-			elif obs == "epsilon":
-				ed_n = 3
-				parity = 1.
-			elif obs == "sp":
-				ed_n = 5
-				parity = 1.
+
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
 		x_mat = (np.array(range(0, n_matsubara)) * 2. + (1.-parity)/2.) * np.pi * T
@@ -145,6 +155,7 @@ for f in filelist:
 		
 		try:
 			nmin = len(x_tau)/8; nmax = len(x_tau)*5/8
+			#nmin = len(x_tau)/16; nmax = len(x_tau)*7/8
 			#nmin = 0; nmax = 10
 			parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 			px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)

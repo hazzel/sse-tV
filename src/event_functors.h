@@ -103,8 +103,13 @@ struct event_dynamic_measurement
 						for (int m = 0; m < l.n_sites(); ++m)
 							for (int n : l.neighbors(m, "nearest neighbors"))
 							{
+								double d_im = (i == m) ? 1. : 0.;
+//								ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
+//									+ l.parity(i) * l.parity(m) * time_displaced_gf(i, m)
+//									* time_displaced_gf(j, n)) / l.n_bonds() * 2./3.;
+								
 								ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
-									+ l.parity(i) * l.parity(m) * time_displaced_gf(i, m)
+									+ (d_im - time_displaced_gf(i, m))
 									* time_displaced_gf(j, n)) / l.n_bonds() * 2./3.;
 								
 //								ep += equal_time_gf(j, i) * equal_time_gf(m, n)
@@ -133,7 +138,7 @@ struct event_dynamic_measurement
 					{
 						auto& r_i = l.real_space_coord(i);
 						auto& r_j = l.real_space_coord(j);
-						sp += std::cos(K.dot(r_j - r_i)) * time_displaced_gf(i, j)
+						sp +=	std::cos(K.dot(r_j - r_i)) * time_displaced_gf(i, j)
 							/ l.n_sites();
 					}
 					return sp;
@@ -142,6 +147,45 @@ struct event_dynamic_measurement
 			config.measure.add_vectorobservable("dyn_sp_mat",
 				config.param.n_matsubara, n_prebin);
 			config.measure.add_vectorobservable("dyn_sp_tau",
+				config.param.n_discrete_tau + 1, n_prebin);
+		}
+		if (boost::algorithm::contains(observables, list_t{"tp"}))
+		{
+			// sp(tau) = sum_ij e^{-i K (r_i - r_j)} <c_i(tau) c_j^dag>
+			obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
+				time_displaced_gf, Random& rng, const lattice& l,
+				const parameters& param)
+				{
+					double tp = 0.;
+					double pi = 4.*std::atan(1.);
+					Eigen::Vector2d K(2.*pi/9., 2.*pi/9.*(2.-1./std::sqrt(3.)));
+					auto wick = [&] (int i, int j, int m, int n)->double
+					{
+						auto& r_i = l.real_space_coord(i);
+						auto& r_j = l.real_space_coord(j);
+						auto& r_m = l.real_space_coord(m);
+						auto& r_n = l.real_space_coord(n);
+						return std::cos(K.dot(r_j - r_i + r_m - r_n))
+							* (time_displaced_gf(i, m) * time_displaced_gf(j, n)
+							- time_displaced_gf(i, n) * time_displaced_gf(j, m))
+							/ std::pow(l.n_sites(), 3.);
+					};
+					int i = rng() * l.n_sites();
+					for (int j = 0; j < l.n_sites(); ++j)
+						for (int m = j+1; m < l.n_sites(); ++m)
+							for (int n = m+1; n < l.n_sites(); ++n)
+								tp += 6. * wick(i, j, m, n);
+					for (int n = 0; n < l.n_sites(); ++n)
+					{
+						int j = 0, m = 0;
+						tp += (3.*l.n_sites()-2) * wick(i, j, m, n);
+					}
+					return tp;
+				});
+			names.push_back("dyn_tp");
+			config.measure.add_vectorobservable("dyn_tp_mat",
+				config.param.n_matsubara, n_prebin);
+			config.measure.add_vectorobservable("dyn_tp_tau",
 				config.param.n_discrete_tau + 1, n_prebin);
 		}
 	}
