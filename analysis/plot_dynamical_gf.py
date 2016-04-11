@@ -68,7 +68,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "tp"
+	obs = "sp"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -83,7 +83,7 @@ for f in filelist:
 		ed_n = 7
 		parity = 1.
 	elif obs == "tp":
-		ed_n = 9
+		ed_n = 11
 		parity = 1.
 		
 	for i in range(len(plist)):

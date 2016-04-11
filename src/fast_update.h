@@ -59,7 +59,6 @@ class fast_update
 				int b = 0; in.read(b);
 				n_non_ident[i] = b;
 			}
-			max_order(max_order_);
 			rebuild();
 		}
 

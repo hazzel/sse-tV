@@ -81,7 +81,7 @@ mc::mc(const std::string& dir)
 	qmc.add_event(event_build{config, rng}, "initial build");
 	qmc.add_event(event_max_order{config, rng}, "max_order");
 	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin,
-		{"M2","epsilon","sp", "tp"}}, "dyn_measure");
+		{"M2", "epsilon", "sp", "tp"}}, "dyn_measure");
 	//Initialize vertex list to reduce warm up time
 	qmc.trigger_event("initial build");
 }
@@ -202,8 +202,8 @@ void mc::do_update()
 			}
 		}
 	}
-	if (is_thermalized())
-		qmc.trigger_event("dyn_measure");
+//	if (is_thermalized())
+//		qmc.trigger_event("dyn_measure");
 	++sweep;
 	if (!is_thermalized())
 		qmc.trigger_event("max_order");

@@ -104,16 +104,9 @@ struct event_dynamic_measurement
 							for (int n : l.neighbors(m, "nearest neighbors"))
 							{
 								double d_im = (i == m) ? 1. : 0.;
-//								ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
-//									+ l.parity(i) * l.parity(m) * time_displaced_gf(i, m)
-//									* time_displaced_gf(j, n)) / l.n_bonds() * 2./3.;
-								
 								ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
-									+ (d_im - time_displaced_gf(i, m))
+									- l.parity(i) * l.parity(m) * time_displaced_gf(i, m)
 									* time_displaced_gf(j, n)) / l.n_bonds() * 2./3.;
-								
-//								ep += equal_time_gf(j, i) * equal_time_gf(m, n)
-//									/ l.n_bonds() * 2./3.;
 							}
 					return ep;
 				});
@@ -138,8 +131,8 @@ struct event_dynamic_measurement
 					{
 						auto& r_i = l.real_space_coord(i);
 						auto& r_j = l.real_space_coord(j);
-						sp +=	std::cos(K.dot(r_j - r_i)) * time_displaced_gf(i, j)
-							/ l.n_sites();
+						sp +=	std::cos(K.dot(r_j - r_i)) * l.parity(i) * l.parity(j)
+							* time_displaced_gf(j, i) * l.n_sites();
 					}
 					return sp;
 				});
@@ -167,9 +160,9 @@ struct event_dynamic_measurement
 						auto& r_n = l.real_space_coord(n);
 						return std::cos(K.dot(r_j - r_i + r_m - r_n))
 							* (time_displaced_gf(i, m) * time_displaced_gf(j, n)
-							- time_displaced_gf(i, n) * time_displaced_gf(j, m))
-							/ std::pow(l.n_sites(), 3.);
+							- time_displaced_gf(i, n) * time_displaced_gf(j, m));
 					};
+					/*
 					int i = rng() * l.n_sites();
 					for (int j = 0; j < l.n_sites(); ++j)
 						for (int m = j+1; m < l.n_sites(); ++m)
@@ -180,6 +173,12 @@ struct event_dynamic_measurement
 						int j = 0, m = 0;
 						tp += (3.*l.n_sites()-2) * wick(i, j, m, n);
 					}
+					*/
+					int i = rng() * l.n_sites();
+					for (int j = 0; j < l.n_sites(); ++j)
+						for (int m = 0; m < l.n_sites(); ++m)
+							for (int n = 0; n < l.n_sites(); ++n)
+								tp += wick(i, j, m, n) * l.n_sites();
 					return tp;
 				});
 			names.push_back("dyn_tp");
