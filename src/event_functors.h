@@ -103,7 +103,6 @@ struct event_dynamic_measurement
 						for (int m = 0; m < l.n_sites(); ++m)
 							for (int n : l.neighbors(m, "nearest neighbors"))
 							{
-								double d_im = (i == m) ? 1. : 0.;
 								ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
 									- l.parity(i) * l.parity(m) * time_displaced_gf(i, m)
 									* time_displaced_gf(j, n)) / l.n_bonds() * 2./3.;

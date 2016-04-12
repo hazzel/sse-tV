@@ -463,7 +463,7 @@ class fast_update
 			std::vector<std::vector<double>> random_times(omega_n_max);
 			for (auto& vec : random_times)
 			{
-				vec.resize(n_non_ident[0] + n_non_ident[1] + 2);
+				vec.resize(n_non_ident[0] + n_non_ident[1] + 1);
 				std::for_each(vec.begin(), vec.end(), [&](double& t)
 					{ t = rng() * param.beta; } );
 				std::sort(vec.begin(), vec.end());
@@ -482,6 +482,8 @@ class fast_update
 				if (current_vertex == 0 || (current_vertex > 0 &&
 					bond_list[current_vertex - 1] > 0))
 				{
+					if (current_vertex > 0)
+					{
 					// Matsubara frequency measurement
 					for (int i = 0; i < dyn_mat.size(); ++i)
 					{
@@ -500,6 +502,7 @@ class fast_update
 						}
 					}
 					++t;
+					}
 					// Imaginary time measurement
 					while (pos_pt < time_pos.size() && tau_pt == time_pos[pos_pt])
 					{

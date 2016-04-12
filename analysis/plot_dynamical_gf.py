@@ -68,7 +68,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "sp"
+	obs = "M2"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -156,7 +156,7 @@ for f in filelist:
 		try:
 			nmin = len(x_tau)/8; nmax = len(x_tau)*5/8
 			#nmin = len(x_tau)/16; nmax = len(x_tau)*7/8
-			#nmin = 0; nmax = 10
+			#nmin = 0; nmax = 30
 			parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 			px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
 			ax2.plot(px, FitFunction(px, *parameter), 'k-', linewidth=3.0)
