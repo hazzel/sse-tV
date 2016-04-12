@@ -479,8 +479,7 @@ class fast_update
 			int tau_pt = 0, pos_pt = 0, t = 0;
 			for (int n = 0; n <= n_max_order; ++n)
 			{
-				if (current_vertex == 0 || (current_vertex > 0 &&
-					bond_list[current_vertex - 1] > 0))
+				if (current_vertex > 0 && bond_list[current_vertex - 1] > 0)
 				{
 					// Matsubara frequency measurement
 					for (int i = 0; i < dyn_mat.size(); ++i)

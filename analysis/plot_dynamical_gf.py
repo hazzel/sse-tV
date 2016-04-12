@@ -54,8 +54,8 @@ color_cycle = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'orange', 'darkgreen']
 marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 
 filelist = []
-filelist.append(glob.glob("../bin/job/*.out"))
-#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
+#filelist.append(glob.glob("../bin/job/*.out"))
+filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L3-V1.0-T0.10/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.0-T0.10/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
@@ -68,7 +68,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "sp"
+	obs = "M2"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -88,7 +88,7 @@ for f in filelist:
 		
 	for i in range(len(plist)):
 		n_matsubara = int(plist[i]["matsubara_freqs"])
-		n_discrete_tau = 2*int(plist[i]["discrete_tau"])
+		n_discrete_tau = int(plist[i]["discrete_tau"])
 		h = float(plist[i]["V"])
 		T = float(plist[i]["T"])
 		L = float(plist[i]["L"])
@@ -101,7 +101,7 @@ for f in filelist:
 
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
-		x_mat = (np.array(range(0, n_matsubara)) * 2. + (1.-parity)/2.) * np.pi * T
+		x_mat = (np.array(range(0, n_matsubara)) * 2. + (1.-parity)/2.) * np.pi * T / 2
 		y_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[0])
 		err_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[1])
 		x_tau = np.array(range(0, n_discrete_tau + 1)) / float(n_discrete_tau) / T
