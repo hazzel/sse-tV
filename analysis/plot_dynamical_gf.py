@@ -18,7 +18,7 @@ from texify import *
 import scipy.integrate
 
 def FitFunction(x, a, b, c):
-	return a+b*np.exp(-c*x)
+	return a+b*np.exp(c*x)
 
 def combinatorial_factor(n, k):
 	prod = Decimal(1)
@@ -68,7 +68,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "M2"
+	obs = "sp"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -81,14 +81,14 @@ for f in filelist:
 		obs = "epsilon"
 	elif obs == "sp":
 		ed_n = 7
-		parity = 1.
+		parity = -1.
 	elif obs == "tp":
 		ed_n = 11
-		parity = 1.
+		parity = -1.
 		
 	for i in range(len(plist)):
 		n_matsubara = int(plist[i]["matsubara_freqs"])
-		n_discrete_tau = int(plist[i]["discrete_tau"])
+		n_discrete_tau = 2*int(plist[i]["discrete_tau"])
 		h = float(plist[i]["V"])
 		T = float(plist[i]["T"])
 		L = float(plist[i]["L"])
@@ -104,7 +104,7 @@ for f in filelist:
 		x_mat = (np.array(range(0, n_matsubara)) * 2. + (1.-parity)/2.) * np.pi * T
 		y_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[0])
 		err_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[1])
-		x_tau = np.array(range(0, n_discrete_tau + 1)) / float(n_discrete_tau) / T / 2.
+		x_tau = np.array(range(0, n_discrete_tau + 1)) / float(n_discrete_tau) / T
 		y_tau = np.abs(np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]))
 		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
 			
@@ -152,10 +152,11 @@ for f in filelist:
 			cap.set_markeredgewidth(1.4)
 		if len(ed_glob) > 0:
 			ax2.plot(np.linspace(0., 1./T/2., n_ed_tau + 1), ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
+			ax2.plot(np.linspace(1./T/2., 1./T, n_ed_tau + 1), np.flipud(ed_data[ed_n]), marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 		try:
-			nmin = len(x_tau)/8; nmax = len(x_tau)*5/8
-			#nmin = len(x_tau)/16; nmax = len(x_tau)*7/8
+			#nmin = len(x_tau)/8; nmax = len(x_tau)*5/8
+			nmin = len(x_tau)*9/16; nmax = len(x_tau)*15/16
 			#nmin = 0; nmax = 30
 			parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 			px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)

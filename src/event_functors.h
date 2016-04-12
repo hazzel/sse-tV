@@ -103,9 +103,8 @@ struct event_dynamic_measurement
 						for (int m = 0; m < l.n_sites(); ++m)
 							for (int n : l.neighbors(m, "nearest neighbors"))
 							{
-								ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
-									- l.parity(i) * l.parity(m) * time_displaced_gf(i, m)
-									* time_displaced_gf(j, n)) / l.n_bonds() * 2./3.;
+								ep += time_displaced_gf(m, i)
+									* time_displaced_gf(j, n) / l.n_bonds() * 2./3.;
 							}
 					return ep;
 				});
@@ -130,8 +129,10 @@ struct event_dynamic_measurement
 					{
 						auto& r_i = l.real_space_coord(i);
 						auto& r_j = l.real_space_coord(j);
-						sp +=	std::cos(K.dot(r_j - r_i)) * l.parity(i) * l.parity(j)
-							* time_displaced_gf(j, i) * l.n_sites();
+//						sp +=	std::cos(K.dot(r_j - r_i)) * l.parity(i) * l.parity(j)
+//							* time_displaced_gf(j, i) * l.n_sites();
+						sp +=	std::cos(K.dot(r_j - r_i))
+							* time_displaced_gf(i, j) * l.n_sites();
 					}
 					return sp;
 				});
@@ -139,7 +140,7 @@ struct event_dynamic_measurement
 			config.measure.add_vectorobservable("dyn_sp_mat",
 				config.param.n_matsubara, n_prebin);
 			config.measure.add_vectorobservable("dyn_sp_tau",
-				config.param.n_discrete_tau + 1, n_prebin);
+				2*config.param.n_discrete_tau + 1, n_prebin);
 		}
 		if (boost::algorithm::contains(observables, list_t{"tp"}))
 		{
@@ -203,11 +204,11 @@ struct event_dynamic_measurement
 			config.measure.add(names[i]+"_mat", dyn_mat[i]);
 			// Average imaginary time measurements from 0..beta/2 and beta/2..beta
 			for (int j = 0; j < dyn_tau_avg.size(); ++j)
-				dyn_tau_avg[j] = (dyn_tau[i][j] + dyn_tau[i][dyn_tau[i].size() - 1
-					- j]) / 2.;
-//				dyn_tau_avg[j] = dyn_tau[i][dyn_tau[i].size() - 1
-//					- j];
-			config.measure.add(names[i]+"_tau", dyn_tau_avg);
+//				dyn_tau_avg[j] = (dyn_tau[i][j] + dyn_tau[i][dyn_tau[i].size() - 1
+//					- j]) / 2.;
+//				dyn_tau_avg[j] = dyn_tau[i][dyn_tau[i].size() - 1 - j];
+//				dyn_tau_avg[j] = dyn_tau[i][j];
+			config.measure.add(names[i]+"_tau", dyn_tau[i]);
 		}
 	}
 };

@@ -482,8 +482,6 @@ class fast_update
 				if (current_vertex == 0 || (current_vertex > 0 &&
 					bond_list[current_vertex - 1] > 0))
 				{
-					if (current_vertex > 0)
-					{
 					// Matsubara frequency measurement
 					for (int i = 0; i < dyn_mat.size(); ++i)
 					{
@@ -502,7 +500,10 @@ class fast_update
 						}
 					}
 					++t;
-					}
+				}
+				if (current_vertex == 0 || (current_vertex > 0 &&
+					bond_list[current_vertex - 1] > 0))
+				{
 					// Imaginary time measurement
 					while (pos_pt < time_pos.size() && tau_pt == time_pos[pos_pt])
 					{
