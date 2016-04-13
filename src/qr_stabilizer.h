@@ -167,13 +167,14 @@ class qr_stabilizer
 			rhs.bottomLeftCorner(N, N) = inv_U.bottomLeftCorner(N, N) * inv_V_l;
 			rhs.bottomRightCorner(N, N) = inv_U.bottomRightCorner(N, N) * inv_U_r;
 
+			dmatrix_t old_td_gf = time_displaced_gf;
 			if (sweep_direction == 1)
 				time_displaced_gf = lhs.bottomLeftCorner(N, N)
 					* rhs.topLeftCorner(N, N) + lhs.bottomRightCorner(N, N)
 					* rhs.bottomLeftCorner(N, N);
 			else
-				time_displaced_gf = lhs.topLeftCorner(N, N)
-					* rhs.topRightCorner(N, N) + lhs.topRightCorner(N, N)
+				time_displaced_gf = -lhs.topLeftCorner(N, N)
+					* rhs.topRightCorner(N, N) - lhs.topRightCorner(N, N)
 					* rhs.bottomRightCorner(N, N);
 			
 			dmatrix_t old_gf = equal_time_gf;
@@ -182,6 +183,14 @@ class qr_stabilizer
 			if ((old_gf - equal_time_gf).norm() > 0.0000001)
 				std::cout << "error in stab: " << (old_gf - equal_time_gf).norm()
 					<< std::endl;
+			if ((old_td_gf - time_displaced_gf).norm() > 0.0000001)
+			{
+				std::cout << "error in td stab: " << (old_td_gf - time_displaced_gf)
+					.norm() << std::endl;
+				print_matrix(old_td_gf);
+				print_matrix(time_displaced_gf);
+				std::cout << "====" << std::endl;
+			}
 		}
 	private:
 		void print_matrix(const dmatrix_t& m)

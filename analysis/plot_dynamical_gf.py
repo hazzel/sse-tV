@@ -54,8 +54,8 @@ color_cycle = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'orange', 'darkgreen']
 marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 
 filelist = []
-#filelist.append(glob.glob("../bin/job/*.out"))
-filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
+filelist.append(glob.glob("../bin/job/*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L3-V1.0-T0.10/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.0-T0.10/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
@@ -80,15 +80,15 @@ for f in filelist:
 		parity = 1.
 		obs = "epsilon"
 	elif obs == "sp":
-		ed_n = 7
-		parity = -1.
+		ed_n = 9
+		parity = 1.
 	elif obs == "tp":
 		ed_n = 11
-		parity = -1.
+		parity = 1.
 		
 	for i in range(len(plist)):
 		n_matsubara = int(plist[i]["matsubara_freqs"])
-		n_discrete_tau = int(plist[i]["discrete_tau"])
+		n_discrete_tau = 2*int(plist[i]["discrete_tau"])
 		h = float(plist[i]["V"])
 		T = float(plist[i]["T"])
 		L = float(plist[i]["L"])
@@ -101,7 +101,7 @@ for f in filelist:
 
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
-		x_mat = (np.array(range(0, n_matsubara)) * 2. + (1.-parity)/2.) * np.pi * T / 2
+		x_mat = (np.array(range(0, n_matsubara)) * 2. + (1.-parity)/2.) * np.pi * T
 		y_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[0])
 		err_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[1])
 		x_tau = np.array(range(0, n_discrete_tau + 1)) / float(n_discrete_tau) / T
@@ -135,12 +135,10 @@ for f in filelist:
 			xscale = xscale**2.
 			ax1.plot(x_mat, ed_data[ed_n+1] * xscale, marker='o', color="r", markersize=10.0, linewidth=2.0)
 			
-			ed_tau = np.linspace(0., 1./T/2., n_ed_tau + 1)
+			ed_tau = np.linspace(0., 1./T, n_ed_tau + 1)
 			y_num_int = np.zeros(n_ed_mat)
 			for n in range(n_ed_mat):
-				i1 = scipy.integrate.simps(ed_data[ed_n] * np.cos(ed_tau * x_mat[n]), ed_tau)
-				i2 = scipy.integrate.simps(ed_data[ed_n] * np.cos((1./(2.*T)+ed_tau) * x_mat[n]), 1./(2.*T) + ed_tau)
-				y_num_int[n] = i1 + (-1.)**n*i2
+				y_num_int[n] = scipy.integrate.simps(ed_data[ed_n] * np.cos(ed_tau * x_mat[n]), ed_tau)
 			ax1.plot(x_mat, y_num_int * xscale, marker='o', color="b", markersize=10.0, linewidth=2.0)
 
 		ax2.set_xlabel(r"$\tau$")
@@ -151,12 +149,12 @@ for f in filelist:
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
 		if len(ed_glob) > 0:
-			ax2.plot(np.linspace(0., 1./T/2., n_ed_tau + 1), ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
-			ax2.plot(np.linspace(1./T/2., 1./T, n_ed_tau + 1), np.flipud(ed_data[ed_n]), marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
+			ax2.plot(np.linspace(0., 1./T, n_ed_tau + 1), ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
+			ax2.plot(np.linspace(0., 1./T, n_ed_tau + 1), np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 		try:
 			#nmin = len(x_tau)/8; nmax = len(x_tau)*5/8
-			nmin = len(x_tau)*9/16; nmax = len(x_tau)*15/16
+			nmin = len(x_tau)*10/16; nmax = len(x_tau)*14/16
 			#nmin = 0; nmax = 30
 			parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 			px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
