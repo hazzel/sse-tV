@@ -18,7 +18,7 @@ from texify import *
 import scipy.integrate
 
 def FitFunction(x, a, b, c):
-	return a+b*np.exp(c*x)
+	return a+b*np.exp(-c*x)
 
 def combinatorial_factor(n, k):
 	prod = Decimal(1)
@@ -68,7 +68,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "M2"
+	obs = "tp"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -108,7 +108,7 @@ for f in filelist:
 		y_tau = np.abs(np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]))
 		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
 			
-		N_bootstrap = 50
+		N_bootstrap = 25
 		x_delta = np.array(range(1, n_matsubara))
 		y_delta = []
 		for j in range(N_bootstrap):
@@ -153,8 +153,8 @@ for f in filelist:
 			ax2.plot(np.linspace(0., 1./T, n_ed_tau + 1), np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 		try:
-			#nmin = len(x_tau)/8; nmax = len(x_tau)*5/8
-			nmin = len(x_tau)*10/16; nmax = len(x_tau)*14/16
+			nmin = len(x_tau)/32; nmax = len(x_tau)*6/16
+			#nmin = len(x_tau)*10/16; nmax = len(x_tau)*14/16
 			#nmin = 0; nmax = 30
 			parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 			px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)

@@ -28,12 +28,9 @@ class event_base
 		{
 			impl = std::shared_ptr<T>(functor);
 			trigger_fun = [functor]() { functor->trigger(); };
-			clone_fun = [functor, this]() { return event_base(*functor,
-				name_str); };
 		}
 	private:
 		std::shared_ptr<void> impl;
 		std::function<void()> trigger_fun;
-		std::function<event_base()> clone_fun;
 		std::string name_str;
 };

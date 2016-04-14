@@ -3,6 +3,8 @@
 #include <boost/algorithm/string.hpp>
 #include "measurements.h"
 #include "configuration.h"
+#include "wick_base.h"
+#include "wick_functors.h"
 
 struct event_rebuild
 {
@@ -52,11 +54,11 @@ struct event_dynamic_measurement
 	std::vector<std::vector<double>> dyn_mat;
 	std::vector<std::vector<double>> dyn_tau;
 	std::vector<double> dyn_tau_avg;
-	std::vector<function_t> obs;
+	std::vector<wick_base<matrix_t>> obs;
 	std::vector<std::string> names;
 
-	event_dynamic_measurement(configuration& config_, Random& rng_, int n_prebin,
-		std::initializer_list<std::string> observables)
+	event_dynamic_measurement(configuration& config_, Random& rng_,
+		int n_prebin, std::initializer_list<std::string> observables)
 		: config(config_), rng(rng_)
 	{
 		time_grid.resize(2 * config.param.n_discrete_tau + 1);
@@ -73,17 +75,7 @@ struct event_dynamic_measurement
 		typedef std::initializer_list<std::string> list_t;
 		if (boost::algorithm::contains(observables, list_t{"M2"}))
 		{
-			// M2(tau) = sum_ij <(n_i(tau) - 1/2)(n_j - 1/2)>
-			obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
-				time_displaced_gf, Random& rng, const lattice& l,
-				const parameters& param)
-				{
-					double M2 = 0.; int i = rng() * l.n_sites();
-					for (int j = 0; j < l.n_sites(); ++j)
-						M2 += time_displaced_gf(i, j) * time_displaced_gf(i, j)
-							/ l.n_sites();
-					return M2;
-				});
+			add_wick(wick_M2{config, rng});
 			names.push_back("dyn_M2");
 			config.measure.add_vectorobservable("dyn_M2_mat",
 				config.param.n_matsubara, n_prebin);
@@ -92,22 +84,7 @@ struct event_dynamic_measurement
 		}
 		if (boost::algorithm::contains(observables, list_t{"epsilon"}))
 		{
-			// ep(tau) = sum_{<ij>,<mn>} <c_i^dag(tau) c_j(tau) c_n^dag c_m>
-			obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
-				time_displaced_gf, Random& rng, const lattice& l,
-				const parameters& param)
-				{
-					double ep = 0.;
-					int i = rng() * l.n_sites();
-					for (int j : l.neighbors(i, "nearest neighbors"))	
-						for (int m = 0; m < l.n_sites(); ++m)
-							for (int n : l.neighbors(m, "nearest neighbors"))
-							{
-								ep += time_displaced_gf(m, i) * time_displaced_gf(j, n)
-									/ l.n_bonds() * 2./3.;
-							}
-					return ep;
-				});
+			add_wick(wick_epsilon{config, rng});
 			names.push_back("dyn_epsilon");
 			config.measure.add_vectorobservable("dyn_epsilon_mat",
 				config.param.n_matsubara, n_prebin);
@@ -116,26 +93,7 @@ struct event_dynamic_measurement
 		}
 		if (boost::algorithm::contains(observables, list_t{"sp"}))
 		{
-			// sp(tau) = sum_ij e^{-i K (r_i - r_j)} <c_i(tau) c_j^dag>
-			obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
-				time_displaced_gf, Random& rng, const lattice& l,
-				const parameters& param)
-				{
-					double sp = 0.;
-					double pi = 4.*std::atan(1.);
-					Eigen::Vector2d K(2.*pi/9., 2.*pi/9.*(2.-1./std::sqrt(3.)));
-					int i = rng() * l.n_sites();
-					for (int j = 0; j < l.n_sites(); ++j)
-					{
-						auto& r_i = l.real_space_coord(i);
-						auto& r_j = l.real_space_coord(j);
-//						sp +=	std::cos(K.dot(r_j - r_i)) * l.parity(i) * l.parity(j)
-//							* time_displaced_gf(j, i) * l.n_sites();
-						sp +=	std::cos(K.dot(r_j - r_i))
-							* time_displaced_gf(i, j) * l.n_sites();
-					}
-					return sp;
-				});
+			add_wick(wick_sp{config, rng});
 			names.push_back("dyn_sp");
 			config.measure.add_vectorobservable("dyn_sp_mat",
 				config.param.n_matsubara, n_prebin);
@@ -144,49 +102,19 @@ struct event_dynamic_measurement
 		}
 		if (boost::algorithm::contains(observables, list_t{"tp"}))
 		{
-			// sp(tau) = sum_ij e^{-i K (r_i - r_j)} <c_i(tau) c_j^dag>
-			obs.emplace_back([] (const matrix_t& equal_time_gf, const matrix_t&
-				time_displaced_gf, Random& rng, const lattice& l,
-				const parameters& param)
-				{
-					double tp = 0.;
-					double pi = 4.*std::atan(1.);
-					Eigen::Vector2d K(2.*pi/9., 2.*pi/9.*(2.-1./std::sqrt(3.)));
-					auto wick = [&] (int i, int j, int m, int n)->double
-					{
-						auto& r_i = l.real_space_coord(i);
-						auto& r_j = l.real_space_coord(j);
-						auto& r_m = l.real_space_coord(m);
-						auto& r_n = l.real_space_coord(n);
-						return std::cos(K.dot(r_j - r_i + r_m - r_n))
-							* (time_displaced_gf(i, m) * time_displaced_gf(j, n)
-							- time_displaced_gf(i, n) * time_displaced_gf(j, m));
-					};
-					/*
-					int i = rng() * l.n_sites();
-					for (int j = 0; j < l.n_sites(); ++j)
-						for (int m = j+1; m < l.n_sites(); ++m)
-							for (int n = m+1; n < l.n_sites(); ++n)
-								tp += 6. * wick(i, j, m, n);
-					for (int n = 0; n < l.n_sites(); ++n)
-					{
-						int j = 0, m = 0;
-						tp += (3.*l.n_sites()-2) * wick(i, j, m, n);
-					}
-					*/
-					int i = rng() * l.n_sites();
-					for (int j = 0; j < l.n_sites(); ++j)
-						for (int m = 0; m < l.n_sites(); ++m)
-							for (int n = 0; n < l.n_sites(); ++n)
-								tp += wick(i, j, m, n) * l.n_sites();
-					return tp;
-				});
+			add_wick(wick_tp{config, rng});
 			names.push_back("dyn_tp");
 			config.measure.add_vectorobservable("dyn_tp_mat",
 				config.param.n_matsubara, n_prebin);
 			config.measure.add_vectorobservable("dyn_tp_tau",
 				2*config.param.n_discrete_tau + 1, n_prebin);
 		}
+	}
+	
+	template<typename T>
+	void add_wick(T&& functor)
+	{
+		obs.push_back(wick_base<matrix_t>(std::forward<T>(functor)));
 	}
 
 	void trigger()

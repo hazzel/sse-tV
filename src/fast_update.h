@@ -8,6 +8,7 @@
 #include "lattice.h"
 #include "parameters.h"
 #include "Random.h"
+#include "wick_base.h"
 
 template<typename stabilizer_t>
 class fast_update
@@ -439,6 +440,26 @@ class fast_update
 			return M2;
 		}
 		
+		double measure_epsilon()
+		{
+			measure_epsilon(equal_time_gf);
+		}
+		
+		double measure_epsilon(const dmatrix_t& gf)
+		{
+			double ep = 0.;
+			int i = rng() * l.n_sites();
+			for (int j : l.neighbors(i, "nearest neighbors"))	
+				for (int m = 0; m < l.n_sites(); ++m)
+					for (int n : l.neighbors(m, "nearest neighbors"))
+					{
+						ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
+							- time_displaced_gf(m, i) * time_displaced_gf(j, n))
+							/ l.n_bonds() * 2./3.;
+					}
+			return ep;
+		}
+	
 		void measure_density_correlations(std::vector<double>& corr)
 		{
 			std::fill(corr.begin(), corr.end(), 0.0);
@@ -453,9 +474,7 @@ class fast_update
 			const std::vector<double>& time_grid,
 			std::vector<std::vector<double>>& dyn_mat,
 			std::vector<std::vector<double>>& dyn_tau,
-			const std::vector<std::function<double(const dmatrix_t&,
-			const dmatrix_t&, Random&, const lattice&, const parameters&)>>&
-			get_obs)
+			const std::vector<wick_base<dmatrix_t>>& obs)
 		{
 			// 1 = forward, -1 = backward
 			int direction = current_vertex == 0 ? 1 : -1;
@@ -486,14 +505,14 @@ class fast_update
 					{
 						// omega_n = 0 is a special case
 						if (omega_n_max > 0)
-							dyn_mat[i][0] += get_obs[i](equal_time_gf,
-								time_displaced_gf, rng, l, param)
-								* (random_times[0][t+1] - random_times[0][t]);
+							dyn_mat[i][0] += obs[i].get_obs(equal_time_gf,
+								time_displaced_gf) * (random_times[0][t+1]
+								- random_times[0][t]);
 						for (int omega_n = 1; omega_n < omega_n_max; ++omega_n)
 						{
 							double omega = 2.*4.*std::atan(1.) * omega_n / param.beta;
-							dyn_mat[i][omega_n] += get_obs[i](equal_time_gf,
-								time_displaced_gf, rng, l, param)
+							dyn_mat[i][omega_n] += obs[i].get_obs(equal_time_gf,
+								time_displaced_gf)
 								* (std::sin(omega * random_times[omega_n][t+1])
 								- std::sin(omega * random_times[omega_n][t])) / omega;
 						}
@@ -507,8 +526,8 @@ class fast_update
 					while (pos_pt < time_pos.size() && tau_pt == time_pos[pos_pt])
 					{
 						for (int i = 0; i < dyn_tau.size(); ++i)
-							dyn_tau[i][pos_pt] = get_obs[i](equal_time_gf,
-								time_displaced_gf, rng, l, param);
+							dyn_tau[i][pos_pt] = obs[i].get_obs(equal_time_gf,
+								time_displaced_gf);
 						++pos_pt;
 					}
 					++tau_pt;
