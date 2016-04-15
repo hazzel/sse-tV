@@ -31,6 +31,31 @@ struct wick_M2
 	}
 };
 
+// kekule(tau) = sum_{kekule} <c_i^dag(tau) c_j(tau) c_n^dag c_m>
+struct wick_kekule
+{
+	configuration& config;
+	Random& rng;
+
+	wick_kekule(configuration& config_, Random& rng_)
+		: config(config_), rng(rng_)
+	{}
+	
+	double get_obs(const matrix_t& equal_time_gf,
+		const matrix_t& time_displaced_gf)
+	{
+		double kek = 0.;
+		for (auto& a : config.l.bonds("kekule"))
+			for (auto& b : config.l.bonds("kekule"))
+			{
+				kek += (equal_time_gf(a.second, a.first) * equal_time_gf(b.first,
+					b.second) - time_displaced_gf(b.first, a.first)
+					* time_displaced_gf(a.second, b.second));
+			}
+		return kek;
+	}
+};
+
 // ep(tau) = sum_{<ij>,<mn>} <c_i^dag(tau) c_j(tau) c_n^dag c_m>
 struct wick_epsilon
 {

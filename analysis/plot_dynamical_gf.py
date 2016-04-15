@@ -18,7 +18,7 @@ from texify import *
 import scipy.integrate
 
 def FitFunction(x, a, b, c):
-	return a+b*np.exp(-c*x)
+	return a + b*np.exp(c*x)
 
 def combinatorial_factor(n, k):
 	prod = Decimal(1)
@@ -68,22 +68,25 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "tp"
+	obs = "kekule"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
-	elif obs == "epsilon":
+	if obs == "kekule":
 		ed_n = 3
 		parity = 1.
-	elif obs == "epsilon_nn":
+	elif obs == "epsilon":
 		ed_n = 5
+		parity = 1.
+	elif obs == "epsilon_nn":
+		ed_n = 7
 		parity = 1.
 		obs = "epsilon"
 	elif obs == "sp":
-		ed_n = 9
+		ed_n = 11
 		parity = 1.
 	elif obs == "tp":
-		ed_n = 11
+		ed_n = 13
 		parity = 1.
 		
 	for i in range(len(plist)):
@@ -143,7 +146,7 @@ for f in filelist:
 
 		ax2.set_xlabel(r"$\tau$")
 		ax2.set_ylabel(r"$M_2(\tau)$")
-		ax2.set_yscale("log")
+		#ax2.set_yscale("log")
 		ax2.plot(x_tau, y_tau, marker="o", color="green", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		(_, caps, _) = ax2.errorbar(x_tau, y_tau, yerr=err_tau, marker='None', capsize=8, color="green")
 		for cap in caps:
@@ -153,9 +156,10 @@ for f in filelist:
 			ax2.plot(np.linspace(0., 1./T, n_ed_tau + 1), np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 		try:
-			nmin = len(x_tau)/32; nmax = len(x_tau)*6/16
+			#nmin = len(x_tau)/32; nmax = len(x_tau)*3/16
 			#nmin = len(x_tau)*10/16; nmax = len(x_tau)*14/16
-			#nmin = 0; nmax = 30
+			nmin = len(x_tau)*20/32; nmax = len(x_tau)*31/32
+			#nmin = 0; nmax = len(x_tau)*2/16
 			parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 			px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
 			ax2.plot(px, FitFunction(px, *parameter), 'k-', linewidth=3.0)

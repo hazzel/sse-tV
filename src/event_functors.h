@@ -82,6 +82,15 @@ struct event_dynamic_measurement
 			config.measure.add_vectorobservable("dyn_M2_tau",
 				2*config.param.n_discrete_tau + 1, n_prebin);
 		}
+		if (boost::algorithm::contains(observables, list_t{"kekule"}))
+		{
+			add_wick(wick_kekule{config, rng});
+			names.push_back("dyn_kekule");
+			config.measure.add_vectorobservable("dyn_kekule_mat",
+				config.param.n_matsubara, n_prebin);
+			config.measure.add_vectorobservable("dyn_kekule_tau",
+				2*config.param.n_discrete_tau + 1, n_prebin);
+		}
 		if (boost::algorithm::contains(observables, list_t{"epsilon"}))
 		{
 			add_wick(wick_epsilon{config, rng});
