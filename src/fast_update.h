@@ -492,6 +492,9 @@ class fast_update
 			// Time grid for imaginary time measurement
 			std::vector<int> time_pos(time_grid.size(), 0);
 			assign_random_times(time_grid, time_pos);
+
+			std::vector<std::vector<double>> td_gf(l.n_sites() * l.n_sites(),
+				std::vector<double>(time_grid.size(), 0.));
 			
 			enable_time_displaced_gf(direction);
 			time_displaced_gf = equal_time_gf;
@@ -528,6 +531,10 @@ class fast_update
 						for (int i = 0; i < dyn_tau.size(); ++i)
 							dyn_tau[i][pos_pt] = obs[i].get_obs(equal_time_gf,
 								time_displaced_gf);
+						for (int i = 0; i < l.n_sites(); ++i)
+							for (int j = 0; j < l.n_sites(); ++j)
+								td_gf[i*l.n_sites() + j][pos_pt]
+									= time_displaced_gf(i, j);
 						++pos_pt;
 					}
 					++tau_pt;
@@ -548,6 +555,10 @@ class fast_update
 				current_vertex = 0;
 			else if (direction == -1)
 				current_vertex = n_max_order;
+			for (int i = 0; i < l.n_sites(); ++i)
+				for (int j = 0; j < l.n_sites(); ++j)
+					measure.add("td_gf_" + std::to_string(i) + "_"
+						+ std::to_string(j), td_gf[i * l.n_sites() + j]);
 		}
 		
 		const dmatrix_t& measure_time_displaced_gf()

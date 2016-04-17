@@ -115,6 +115,10 @@ mc::mc(const std::string& dir)
 	config.measure.add_observable("avg error", n_prebin);
 	config.measure.add_vectorobservable("<n_r n_0>", config.l.max_distance() + 1,
 		n_prebin);
+	for (int i = 0; i < config.l.n_sites(); ++i)
+		for (int j = 0; j < config.l.n_sites(); ++j)
+			config.measure.add_vectorobservable("td_gf_" + std::to_string(i) + "_"
+				+ std::to_string(j), 2 * config.param.n_discrete_tau + 1, n_prebin);
 	
 	qmc.add_measure(measure_estimator{config, config.measure, pars,
 		std::vector<double>(config.l.max_distance() + 1, 0.0)}, "measurement");
@@ -127,8 +131,8 @@ mc::mc(const std::string& dir)
 	qmc.add_event(event_build{config, rng}, "initial build");
 	qmc.add_event(event_max_order{config, rng}, "max_order");
 	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin,
-//		{"M2", "sp"}}, "dyn_measure");
-		{"M2", "kekule", "epsilon", "sp", "tp"}}, "dyn_measure");
+		{"M2"}}, "dyn_measure");
+//		{"M2", "kekule", "epsilon", "sp", "tp"}}, "dyn_measure");
 	//Initialize vertex list to reduce warm up time
 	qmc.trigger_event("initial build");
 }
