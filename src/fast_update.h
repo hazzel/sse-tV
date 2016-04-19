@@ -493,9 +493,9 @@ class fast_update
 			std::vector<int> time_pos(time_grid.size(), 0);
 			assign_random_times(time_grid, time_pos);
 
-			std::vector<std::vector<double>> td_gf(l.n_sites() * l.n_sites(),
-				std::vector<double>(time_grid.size(), 0.));
-			
+			std::vector<dmatrix_t> td_gf(time_grid.size());
+			std::vector<dmatrix_t> et_gf(time_grid.size());
+
 			enable_time_displaced_gf(direction);
 			time_displaced_gf = equal_time_gf;
 			int tau_pt = 0, pos_pt = 0, t = 0;
@@ -509,13 +509,13 @@ class fast_update
 						// omega_n = 0 is a special case
 						if (omega_n_max > 0)
 							dyn_mat[i][0] += obs[i].get_obs(equal_time_gf,
-								time_displaced_gf) * (random_times[0][t+1]
-								- random_times[0][t]);
+								equal_time_gf, time_displaced_gf, time_displaced_gf)
+								* (random_times[0][t+1] - random_times[0][t]);
 						for (int omega_n = 1; omega_n < omega_n_max; ++omega_n)
 						{
 							double omega = 2.*4.*std::atan(1.) * omega_n / param.beta;
 							dyn_mat[i][omega_n] += obs[i].get_obs(equal_time_gf,
-								time_displaced_gf)
+								equal_time_gf, time_displaced_gf, time_displaced_gf)
 								* (std::sin(omega * random_times[omega_n][t+1])
 								- std::sin(omega * random_times[omega_n][t])) / omega;
 						}
@@ -528,13 +528,11 @@ class fast_update
 					// Imaginary time measurement
 					while (pos_pt < time_pos.size() && tau_pt == time_pos[pos_pt])
 					{
-						for (int i = 0; i < dyn_tau.size(); ++i)
-							dyn_tau[i][pos_pt] = obs[i].get_obs(equal_time_gf,
-								time_displaced_gf);
-						for (int i = 0; i < l.n_sites(); ++i)
-							for (int j = 0; j < l.n_sites(); ++j)
-								td_gf[i*l.n_sites() + j][pos_pt]
-									= time_displaced_gf(i, j);
+//						for (int i = 0; i < dyn_tau.size(); ++i)
+//							dyn_tau[i][pos_pt] = obs[i].get_obs(equal_time_gf,
+//								time_displaced_gf);
+						et_gf[pos_pt] = equal_time_gf;
+						td_gf[pos_pt] = time_displaced_gf;
 						++pos_pt;
 					}
 					++tau_pt;
@@ -555,10 +553,11 @@ class fast_update
 				current_vertex = 0;
 			else if (direction == -1)
 				current_vertex = n_max_order;
-			for (int i = 0; i < l.n_sites(); ++i)
-				for (int j = 0; j < l.n_sites(); ++j)
-					measure.add("td_gf_" + std::to_string(i) + "_"
-						+ std::to_string(j), td_gf[i * l.n_sites() + j]);
+
+			for (int t = 0; t < time_grid.size(); ++t)
+				for (int i = 0; i < dyn_tau.size(); ++i)
+					dyn_tau[i][t] = obs[i].get_obs(et_gf[0], et_gf[t], td_gf[t],
+						td_gf[time_grid.size()-1-t]);
 		}
 		
 		const dmatrix_t& measure_time_displaced_gf()

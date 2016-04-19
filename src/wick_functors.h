@@ -20,12 +20,12 @@ struct wick_M2
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& equal_time_gf,
-		const matrix_t& time_displaced_gf)
+	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
+		const matrix_t& td_gf_t, const matrix_t& td_gf_mt)
 	{
 		double M2 = 0.; int i = rng() * config.l.n_sites();
 		for (int j = 0; j < config.l.n_sites(); ++j)
-			M2 += time_displaced_gf(i, j) * time_displaced_gf(i, j)
+			M2 += td_gf_t(i, j) * td_gf_t(i, j)
 				/ config.l.n_sites();
 		return M2;
 	}
@@ -41,16 +41,16 @@ struct wick_kekule
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& equal_time_gf,
-		const matrix_t& time_displaced_gf)
+	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
+		const matrix_t& td_gf_t, const matrix_t& td_gf_mt)
 	{
 		double kek = 0.;
 		for (auto& a : config.l.bonds("kekule"))
 			for (auto& b : config.l.bonds("kekule"))
 			{
-				kek += (equal_time_gf(a.second, a.first) * equal_time_gf(b.first,
-					b.second) - time_displaced_gf(b.first, a.first)
-					* time_displaced_gf(a.second, b.second));
+				kek += (et_gf_0(a.second, a.first) * et_gf_0(b.first,
+					b.second) - td_gf_t(b.first, a.first)
+					* td_gf_t(a.second, b.second));
 			}
 		return kek;
 	}
@@ -66,8 +66,8 @@ struct wick_epsilon
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& equal_time_gf,
-		const matrix_t& time_displaced_gf)
+	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
+		const matrix_t& td_gf_t, const matrix_t& td_gf_mt)
 	{
 		double ep = 0.;
 		int i = rng() * config.l.n_sites();
@@ -75,8 +75,8 @@ struct wick_epsilon
 			for (int m = 0; m < config.l.n_sites(); ++m)
 				for (int n : config.l.neighbors(m, "nearest neighbors"))
 				{
-					ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
-						- time_displaced_gf(m, i) * time_displaced_gf(j, n))
+					ep += (et_gf_0(j, i) * et_gf_0(m, n)
+						- td_gf_t(m, i) * td_gf_t(j, n))
 						/ config.l.n_bonds() * 2./3.;
 				}
 		return ep;
@@ -93,8 +93,8 @@ struct wick_sp
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& equal_time_gf,
-		const matrix_t& time_displaced_gf)
+	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
+		const matrix_t& td_gf_t, const matrix_t& td_gf_mt)
 	{
 		double sp = 0.;
 		double pi = 4.*std::atan(1.);
@@ -105,9 +105,9 @@ struct wick_sp
 			auto& r_i = config.l.real_space_coord(i);
 			auto& r_j = config.l.real_space_coord(j);
 //						sp +=	std::cos(K.dot(r_j - r_i)) * config.l.parity(i) * config.l.parity(j)
-//							* time_displaced_gf(j, i) * config.l.n_sites();
+//							* td_gf_t(j, i) * config.l.n_sites();
 			sp +=	std::cos(K.dot(r_j - r_i))
-				* time_displaced_gf(i, j) * config.l.n_sites();
+				* td_gf_t(i, j) * config.l.n_sites();
 		}
 		return sp;
 	}
@@ -124,8 +124,8 @@ struct wick_tp
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& equal_time_gf,
-		const matrix_t& time_displaced_gf)
+	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
+		const matrix_t& td_gf_t, const matrix_t& td_gf_mt)
 	{
 		double tp = 0.;
 		double pi = 4.*std::atan(1.);
@@ -137,9 +137,10 @@ struct wick_tp
 			auto& r_m = config.l.real_space_coord(m);
 			auto& r_n = config.l.real_space_coord(n);
 			return std::cos(K.dot(r_j - r_i + r_m - r_n))
-				* (time_displaced_gf(i, m) * time_displaced_gf(j, n)
-				- time_displaced_gf(i, n) * time_displaced_gf(j, m));
+				* (td_gf_t(i, m) * td_gf_t(j, n)
+				- td_gf_t(i, n) * td_gf_t(j, m));
 		};
+		/*
 		int i = rng() * config.l.n_sites();
 		for (int j = 0; j < config.l.n_sites(); ++j)
 			for (int m = j+1; m < config.l.n_sites(); ++m)
@@ -150,13 +151,12 @@ struct wick_tp
 			int j = 0, m = 0;
 			tp += (3.*config.l.n_sites()-2) * wick(i, j, m, n);
 		}
-		/*
+		*/
 		int i = rng() * config.l.n_sites();
 		for (int j = 0; j < config.l.n_sites(); ++j)
 			for (int m = 0; m < config.l.n_sites(); ++m)
 				for (int n = 0; n < config.l.n_sites(); ++n)
-					tp += wick(i, j, m, n) * l.n_sites();
-		*/
+					tp += wick(i, j, m, n) * config.l.n_sites();
 		return tp;
 	}
 };

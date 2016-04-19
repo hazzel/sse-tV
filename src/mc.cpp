@@ -12,6 +12,7 @@ mc::mc(const std::string& dir)
 	pars.read_file(dir);
 	sweep = 0;
 	measure_cnt = 0;
+	dyn_meas_cnt = 0;
 	n_cycles = pars.value_or_default<int>("cycles", 300);
 	n_warmup = pars.value_or_default<int>("warmup", 100000);
 	n_prebin = pars.value_or_default<int>("prebin", 500);
@@ -115,10 +116,6 @@ mc::mc(const std::string& dir)
 	config.measure.add_observable("avg error", n_prebin);
 	config.measure.add_vectorobservable("<n_r n_0>", config.l.max_distance() + 1,
 		n_prebin);
-	for (int i = 0; i < config.l.n_sites(); ++i)
-		for (int j = 0; j < config.l.n_sites(); ++j)
-			config.measure.add_vectorobservable("td_gf_" + std::to_string(i) + "_"
-				+ std::to_string(j), 2 * config.param.n_discrete_tau + 1, n_prebin);
 	
 	qmc.add_measure(measure_estimator{config, config.measure, pars,
 		std::vector<double>(config.l.max_distance() + 1, 0.0)}, "measurement");
@@ -131,7 +128,7 @@ mc::mc(const std::string& dir)
 	qmc.add_event(event_build{config, rng}, "initial build");
 	qmc.add_event(event_max_order{config, rng}, "max_order");
 	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin,
-		{"M2"}}, "dyn_measure");
+		{"M2", "sp"}}, "dyn_measure");
 //		{"M2", "kekule", "epsilon", "sp", "tp"}}, "dyn_measure");
 	//Initialize vertex list to reduce warm up time
 	qmc.trigger_event("initial build");
@@ -221,6 +218,7 @@ bool mc::is_thermalized()
 
 void mc::do_update()
 {
+	int n_dyn_cycles = 10;
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		qmc.do_update(config.measure);
@@ -237,7 +235,14 @@ void mc::do_update()
 		config.M.stabilize_backward();
 	}
 	if (is_thermalized())
-		qmc.trigger_event("dyn_measure");
+	{
+		++dyn_meas_cnt;
+		if (dyn_meas_cnt == n_dyn_cycles)
+		{
+			qmc.trigger_event("dyn_measure");
+			dyn_meas_cnt = 0;
+		}
+	}
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		config.M.advance_forward();
@@ -254,7 +259,14 @@ void mc::do_update()
 		}
 	}
 	if (is_thermalized())
-		qmc.trigger_event("dyn_measure");
+	{
+		++dyn_meas_cnt;
+		if (dyn_meas_cnt == n_dyn_cycles)
+		{
+			qmc.trigger_event("dyn_measure");
+			dyn_meas_cnt = 0;
+		}
+	}
 	++sweep;
 	if (!is_thermalized())
 		qmc.trigger_event("max_order");
