@@ -108,6 +108,7 @@ mc::mc(const std::string& dir)
 
 	//Set up measurements
 	config.measure.add_observable("M2", n_prebin);
+	config.measure.add_observable("epsilon", n_prebin);
 	config.measure.add_observable("<k>_1", n_prebin);
 	config.measure.add_observable("<k>_2", n_prebin);
 	config.measure.add_observable("energy", n_prebin);
@@ -128,7 +129,8 @@ mc::mc(const std::string& dir)
 	qmc.add_event(event_build{config, rng}, "initial build");
 	qmc.add_event(event_max_order{config, rng}, "max_order");
 	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin,
-		{"M2", "sp"}}, "dyn_measure");
+//		{"M2", "sp"}}, "dyn_measure");
+		{"M2", "epsilon", "sp", "tp"}}, "dyn_measure");
 //		{"M2", "kekule", "epsilon", "sp", "tp"}}, "dyn_measure");
 	//Initialize vertex list to reduce warm up time
 	qmc.trigger_event("initial build");
@@ -218,7 +220,7 @@ bool mc::is_thermalized()
 
 void mc::do_update()
 {
-	int n_dyn_cycles = 10;
+	int n_dyn_cycles = 1;
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		qmc.do_update(config.measure);
