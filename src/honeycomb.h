@@ -7,6 +7,7 @@
 #include <boost/graph/adjacency_list.hpp>
 #include "lattice.h"
 
+
 struct honeycomb
 {
 	//typedef lattice::graph_t graph_t;
@@ -76,5 +77,87 @@ struct honeycomb
 				real_space_map.push_back(Eigen::Vector2d{c1 * a1 + c2 * a2});
 			}
 		}
+	}
+
+	void generate_maps(lattice& l)
+	{
+		l.generate_neighbor_map("nearest neighbors", [&]
+			(lattice::vertex_t i, lattice::vertex_t j) {
+			return l.distance(i, j) == 1; });
+		l.generate_bond_map("nearest neighbors", [&]
+			(lattice::vertex_t i, lattice::vertex_t j)
+			{ return l.distance(i, j) == 1; });
+		l.generate_bond_map("kekule", [&]
+			(lattice::pair_vector_t& list)
+		{
+			int N = l.n_sites();
+			int L = std::sqrt(N / 2);
+			if (L == 2)
+			{
+				list = {{0, 1}, {1, 0}, {4, 7}, {7, 4}, {2, 5}, {5, 2}};
+				return;
+			}
+
+			for (int i = 0; i < L; ++i)
+				for (int j = 0; j < L; j+=3)
+				{
+					int x0 = 2 * i + 2 * L * i;
+					list.push_back({(x0 + 2*L*j) % N, (x0 + 2*L*j+1) % N});
+					list.push_back({(x0 + 2*L*j+1) % N, (x0 + 2*L*j) % N});
+
+					int x1 = 2 * i + 2 * L * i + 4*L;
+					if (i == 0)
+					{
+						list.push_back({(x1 + 2*L*j) % N, (x1 + 2*L*j + 4*L-1) % N});
+						list.push_back({(x1 + 2*L*j + 4*L-1) % N, (x1 + 2*L*j) % N});
+					}
+					else
+					{
+						list.push_back({(x1 + 2*L*j) % N, (x1 + 2*L*j + 2*L-1) % N});
+						list.push_back({(x1 + 2*L*j + 2*L-1) % N, (x1 + 2*L*j) % N});
+					}
+
+					int x2 = 2 * i + 2 * L * i + 2*L;
+					if (i == 0)
+					{
+						list.push_back({(x2 + 2*L*j) % N, (x2 + 2*L*j + 2*L-1) % N});
+						list.push_back({(x2 + 2*L*j + 2*L-1) % N, (x2 + 2*L*j) % N});
+					}
+					else
+					{
+						list.push_back({(x2 + 2*L*j) % N, (x2 + 2*L*j - 1) % N});
+						list.push_back({(x2 + 2*L*j - 1) % N, (x2 + 2*L*j) % N});
+					}
+				}
+		});
+		
+		l.generate_bond_map("chern", [&]
+		(lattice::pair_vector_t& list)
+		{
+			int N = l.n_sites();
+			int L = std::sqrt(N / 2);
+
+			for (int i = 0; i < L; ++i)
+				for (int j = 0; j < L; ++j)
+				{
+					int x = 2 * i + 2 * L * j;
+					int y = x + 2 * L;
+					list.push_back({x % N, y % N});
+	
+					x = 2 * i + 2 * L * j;
+					if (i == L - 1)
+						y = x - 2 * (L - 1);
+					else
+						y = x + 2;
+					list.push_back({(y+N) % N, x % N});
+				
+					x = 2 * i + 2 * L * j;
+					if (i == 0)
+						y = x + 4 * L;
+					else
+						y = x + 2 * (L - 1);
+					list.push_back({y % N, x % N});
+				}
+		});
 	}
 };

@@ -45,55 +45,7 @@ mc::mc(const std::string& dir)
 
 	//Initialize lattice
 	config.l.generate_graph(hc);
-	config.l.generate_neighbor_map("nearest neighbors", [this]
-		(lattice::vertex_t i, lattice::vertex_t j) {
-		return config.l.distance(i, j) == 1; });
-	config.l.generate_bond_map("nearest neighbors", [this]
-		(lattice::vertex_t i, lattice::vertex_t j)
-		{ return config.l.distance(i, j) == 1; });
-	config.l.generate_bond_map("kekule", [this]
-		(lattice::pair_vector_t& list)
-		{
-			int N = config.l.n_sites();
-			int L = std::sqrt(N / 2);
-			if (L == 2)
-			{
-				list = {{0, 1}, {1, 0}, {4, 7}, {7, 4}, {2, 5}, {5, 2}};
-				return;
-			}
-
-			for (int i = 0; i < L; ++i)
-				for (int j = 0; j < L; j+=3)
-				{
-					int x0 = 2 * i + 2 * L * i;
-					list.push_back({(x0 + 2*L*j) % N, (x0 + 2*L*j+1) % N});
-					list.push_back({(x0 + 2*L*j+1) % N, (x0 + 2*L*j) % N});
-	
-					int x1 = 2 * i + 2 * L * i + 4*L;
-					if (i == 0)
-					{
-						list.push_back({(x1 + 2*L*j) % N, (x1 + 2*L*j + 4*L-1) % N});
-						list.push_back({(x1 + 2*L*j + 4*L-1) % N, (x1 + 2*L*j) % N});
-					}
-					else
-					{
-						list.push_back({(x1 + 2*L*j) % N, (x1 + 2*L*j + 2*L-1) % N});
-						list.push_back({(x1 + 2*L*j + 2*L-1) % N, (x1 + 2*L*j) % N});
-					}
-
-					int x2 = 2 * i + 2 * L * i + 2*L;
-					if (i == 0)
-					{
-						list.push_back({(x2 + 2*L*j) % N, (x2 + 2*L*j + 2*L-1) % N});
-						list.push_back({(x2 + 2*L*j + 2*L-1) % N, (x2 + 2*L*j) % N});
-					}
-					else
-					{
-						list.push_back({(x2 + 2*L*j) % N, (x2 + 2*L*j - 1) % N});
-						list.push_back({(x2 + 2*L*j - 1) % N, (x2 + 2*L*j) % N});
-					}
-				}
-		});
+	hc.generate_maps(config.l);
 
 	//Set up Monte Carlo moves
 	qmc.add_move(move_update_vertex{config, rng, 0}, "update type 0",
@@ -129,8 +81,8 @@ mc::mc(const std::string& dir)
 	qmc.add_event(event_build{config, rng}, "initial build");
 	qmc.add_event(event_max_order{config, rng}, "max_order");
 	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin,
-//		{"M2", "sp"}}, "dyn_measure");
-		{"M2", "epsilon", "sp", "tp"}}, "dyn_measure");
+		{"M2", "sp"}}, "dyn_measure");
+//		{"M2", "epsilon", "sp", "tp"}}, "dyn_measure");
 //		{"M2", "kekule", "epsilon", "sp", "tp"}}, "dyn_measure");
 	//Initialize vertex list to reduce warm up time
 	qmc.trigger_event("initial build");
@@ -220,7 +172,7 @@ bool mc::is_thermalized()
 
 void mc::do_update()
 {
-	int n_dyn_cycles = 1;
+	int n_dyn_cycles = 5;
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		qmc.do_update(config.measure);
@@ -243,6 +195,7 @@ void mc::do_update()
 		{
 			qmc.trigger_event("dyn_measure");
 			dyn_meas_cnt = 0;
+			++sweep;
 		}
 	}
 	for (int n = 0; n < config.M.max_order(); ++n)
@@ -267,9 +220,11 @@ void mc::do_update()
 		{
 			qmc.trigger_event("dyn_measure");
 			dyn_meas_cnt = 0;
+			++sweep;
 		}
 	}
-	++sweep;
+	if (!is_thermalized())
+		++sweep;
 	if (!is_thermalized())
 		qmc.trigger_event("max_order");
 	if (sweep == n_warmup)

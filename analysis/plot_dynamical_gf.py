@@ -68,7 +68,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "epsilon"
+	obs = "M2"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -91,7 +91,7 @@ for f in filelist:
 		
 	for i in range(len(plist)):
 		n_matsubara = int(plist[i]["matsubara_freqs"])
-		n_discrete_tau = 2*int(plist[i]["discrete_tau"])
+		n_discrete_tau = int(plist[i]["discrete_tau"])
 		h = float(plist[i]["V"])
 		T = float(plist[i]["T"])
 		L = float(plist[i]["L"])
@@ -107,9 +107,9 @@ for f in filelist:
 		x_mat = (np.array(range(0, n_matsubara)) * 2. + (1.-parity)/2.) * np.pi * T
 		y_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[0])
 		err_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[1])
-		x_tau = np.array(range(0, n_discrete_tau + 1)) / float(n_discrete_tau) / T
-		y_tau = np.abs(np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]))
-		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
+		x_tau = np.array(range(0, n_discrete_tau + 1)) / float(n_discrete_tau) / T / 2
+		y_tau = np.abs(np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]))[:n_discrete_tau+1]
+		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])[:n_discrete_tau+1]
 
 		N_bootstrap = 25
 		x_delta = np.array(range(1, n_matsubara))
@@ -152,16 +152,17 @@ for f in filelist:
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
 		if len(ed_glob) > 0:
-			ax2.plot(np.linspace(0., 1./T, n_ed_tau + 1), ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
-			ax2.plot(np.linspace(0., 1./T, n_ed_tau + 1), np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
+			ax2.plot(np.linspace(0., 1./T, n_ed_tau + 1)[:len(ed_data[ed_n])/2], ed_data[ed_n][:len(ed_data[ed_n])/2], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
+			#ax2.plot(np.linspace(0., 1./T, n_ed_tau + 1), np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 		try:
-			nmin = len(x_tau)*1/32; nmax = len(x_tau)*15/32
+			nmin = len(x_tau)*0/32; nmax = len(x_tau)*28/32
 			#nmin = len(x_tau)*10/16; nmax = len(x_tau)*14/16
-			#nmin = len(x_tau)*17/32; nmax = len(x_tau)*31/32
+			#nmin = len(x_tau)*17/32; nmax = len(x_tau)*32/32
 			#nmin = 0; nmax = len(x_tau)*2/16
 			parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 			#parameter, perr = curve_fit(FitFunction, x_tau[nmin:nmax], y_tau[nmin:nmax], p0=[0.01, 0.01, 1.])
+			#parameter, perr = curve_fit( FitFunction, np.linspace(0., 1./T, n_ed_tau + 1)[:n_ed_tau/2-2], ed_data[ed_n][:n_ed_tau/2-2], p0=[-0.00001, 0.08, 1.15])
 			px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
 			ax2.plot(px, FitFunction(px, *parameter), 'k-', linewidth=3.0)
 			d = -int(np.log10(abs(perr[2])))+2

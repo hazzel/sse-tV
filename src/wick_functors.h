@@ -27,7 +27,7 @@ struct wick_M2
 		for (int i = 0; i < config.l.n_sites(); ++i)
 			for (int j = 0; j < config.l.n_sites(); ++j)
 				M2 += td_gf_t(i, j) * td_gf_t(i, j)
-					/ config.l.n_sites() / config.l.n_sites();
+					/ std::pow(config.l.n_sites(), 2.);
 		return M2;
 	}
 };

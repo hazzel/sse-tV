@@ -442,7 +442,7 @@ class fast_update
 		
 		double measure_epsilon()
 		{
-			measure_epsilon(equal_time_gf);
+			return measure_epsilon(equal_time_gf);
 		}
 		
 		double measure_epsilon(const dmatrix_t& gf)
@@ -496,6 +496,11 @@ class fast_update
 			std::vector<dmatrix_t> td_gf(time_grid.size());
 			std::vector<dmatrix_t> et_gf(time_grid.size());
 
+			std::vector<std::vector<double>> lower(dyn_mat.size(),
+				std::vector<double>(dyn_mat[0].size(), 0.));
+			std::vector<std::vector<double>> upper(dyn_mat.size(),
+				std::vector<double>(dyn_mat[0].size(), 0.));
+
 			enable_time_displaced_gf(direction);
 			time_displaced_gf = equal_time_gf;
 			int tau_pt = 0, pos_pt = 0, t = 0;
@@ -508,16 +513,36 @@ class fast_update
 					{
 						// omega_n = 0 is a special case
 						if (omega_n_max > 0)
-							dyn_mat[i][0] += obs[i].get_obs(equal_time_gf,
-								equal_time_gf, time_displaced_gf, time_displaced_gf)
-								* (random_times[0][t+1] - random_times[0][t]);
+						{
+//							dyn_mat[i][0] += obs[i].get_obs(equal_time_gf,
+//								equal_time_gf, time_displaced_gf, time_displaced_gf)
+//								* (random_times[0][t+1] - random_times[0][t]);
+							if (t < random_times[0].size() - 2)
+								lower[i][0] += obs[i].get_obs(equal_time_gf,
+									equal_time_gf, time_displaced_gf, time_displaced_gf)
+									* (random_times[0][t+1] - random_times[0][t]);
+							if (t > 0)
+								upper[i][0] += obs[i].get_obs(equal_time_gf,
+									equal_time_gf, time_displaced_gf, time_displaced_gf)
+									* (random_times[0][t] - random_times[0][t-1]);
+						}
 						for (int omega_n = 1; omega_n < omega_n_max; ++omega_n)
 						{
 							double omega = 2.*4.*std::atan(1.) * omega_n / param.beta;
-							dyn_mat[i][omega_n] += obs[i].get_obs(equal_time_gf,
-								equal_time_gf, time_displaced_gf, time_displaced_gf)
-								* (std::sin(omega * random_times[omega_n][t+1])
-								- std::sin(omega * random_times[omega_n][t])) / omega;
+//							dyn_mat[i][omega_n] += obs[i].get_obs(equal_time_gf,
+//								equal_time_gf, time_displaced_gf, time_displaced_gf)
+//								* (std::sin(omega * random_times[omega_n][t+1])
+//								- std::sin(omega * random_times[omega_n][t])) / omega;
+							if (t < random_times[0].size() - 2)
+								lower[i][omega_n] += obs[i].get_obs(equal_time_gf,
+									equal_time_gf, time_displaced_gf, time_displaced_gf)
+									* (std::sin(omega * random_times[omega_n][t+1])
+									- std::sin(omega * random_times[omega_n][t]))/omega;
+							if (t > 0)
+								upper[i][omega_n] += obs[i].get_obs(equal_time_gf,
+									equal_time_gf, time_displaced_gf, time_displaced_gf)
+									* (std::sin(omega * random_times[omega_n][t])
+									-std::sin(omega * random_times[omega_n][t-1]))/omega;
 						}
 					}
 					++t;
@@ -558,6 +583,9 @@ class fast_update
 				for (int i = 0; i < dyn_tau.size(); ++i)
 					dyn_tau[i][t] = obs[i].get_obs(et_gf[0], et_gf[t], td_gf[t],
 						td_gf[time_grid.size()-1-t]);
+			for (int i = 0; i < dyn_mat.size(); ++i)
+				for (int t = 0; t < dyn_mat[i].size(); ++t)
+					dyn_mat[i][t] = (lower[i][t] + upper[i][t]) / 2.;
 		}
 		
 		const dmatrix_t& measure_time_displaced_gf()
