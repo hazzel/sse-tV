@@ -20,13 +20,12 @@ struct wick_M2
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
-		const matrix_t& td_gf_t, const matrix_t& td_gf_mt)
+	double get_obs(const matrix_t& et_gf, const matrix_t& td_gf)
 	{
 		double M2 = 0.;
 		for (int i = 0; i < config.l.n_sites(); ++i)
 			for (int j = 0; j < config.l.n_sites(); ++j)
-				M2 += td_gf_t(i, j) * td_gf_t(i, j)
+				M2 += td_gf(i, j) * td_gf(i, j)
 					/ std::pow(config.l.n_sites(), 2.);
 		return M2;
 	}
@@ -42,16 +41,15 @@ struct wick_kekule
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
-		const matrix_t& td_gf_t, const matrix_t& td_gf_mt)
+	double get_obs(const matrix_t& et_gf, const matrix_t& td_gf)
 	{
 		double kek = 0.;
 		for (auto& a : config.l.bonds("kekule"))
 			for (auto& b : config.l.bonds("kekule"))
 			{
-				kek += (et_gf_0(a.second, a.first) * et_gf_0(b.first,
-					b.second) - td_gf_t(b.first, a.first)
-					* td_gf_t(a.second, b.second));
+				kek += (et_gf(a.second, a.first) * et_gf(b.first,
+					b.second) - td_gf(b.first, a.first)
+					* td_gf(a.second, b.second));
 			}
 		return kek;
 	}
@@ -67,8 +65,7 @@ struct wick_epsilon
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
-		const matrix_t& td_gf_t, const matrix_t& td_gf_mt)
+	double get_obs(const matrix_t& et_gf, const matrix_t& td_gf)
 	{
 		double ep = 0.;
 		for (int i = 0; i < config.l.n_sites(); ++i)
@@ -76,9 +73,9 @@ struct wick_epsilon
 				for (int m = 0; m < config.l.n_sites(); ++m)
 					for (int n : config.l.neighbors(m, "nearest neighbors"))
 					{
-						ep += (et_gf_0(j, i) * et_gf_0(m, n)
-							+ config.l.parity(i) * config.l.parity(m) * td_gf_t(i, m)
-								* td_gf_t(j, n)) / std::pow(config.l.n_bonds(), 2.);
+						ep += (et_gf(j, i) * et_gf(m, n)
+							+ config.l.parity(i) * config.l.parity(m) * td_gf(i, m)
+								* td_gf(j, n)) / std::pow(config.l.n_bonds(), 2.);
 					}
 		return ep;
 	}
@@ -94,8 +91,7 @@ struct wick_sp
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
-		const matrix_t& td_gf_t, const matrix_t& td_gf_mt)
+	double get_obs(const matrix_t& et_gf, const matrix_t& td_gf)
 	{
 		double sp = 0.;
 		double pi = 4.*std::atan(1.);
@@ -105,7 +101,7 @@ struct wick_sp
 			{
 				auto& r_i = config.l.real_space_coord(i);
 				auto& r_j = config.l.real_space_coord(j);
-				sp +=	std::cos(K.dot(r_j - r_i)) * td_gf_t(i, j);
+				sp +=	std::cos(K.dot(r_j - r_i)) * td_gf(i, j);
 			}
 		return sp;
 	}
@@ -122,8 +118,7 @@ struct wick_tp
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
-		const matrix_t& td_gf_t, const matrix_t& td_gf_mt)
+	double get_obs(const matrix_t& et_gf, const matrix_t& td_gf)
 	{
 		double tp = 0.;
 		double pi = 4.*std::atan(1.);
@@ -138,8 +133,8 @@ struct wick_tp
 						auto& r_m = config.l.real_space_coord(m);
 						auto& r_n = config.l.real_space_coord(n);
 						tp += std::cos(K.dot(r_j - r_i + r_m - r_n))
-							* (td_gf_t(i, m) * td_gf_t(j, n)
-							- td_gf_t(i, n) * td_gf_t(j, m));
+							* (td_gf(i, m) * td_gf(j, n)
+							- td_gf(i, n) * td_gf(j, m));
 					}
 		return tp;
 	}
