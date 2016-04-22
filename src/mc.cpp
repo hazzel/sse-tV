@@ -6,13 +6,12 @@
 #include "event_functors.h"
 
 mc::mc(const std::string& dir)
-	: rng(Random()), qmc(rng), config(rng)
+	: rng(Random()), qmc(rng), config(rng, measure)
 {
 	//Read parameters
 	pars.read_file(dir);
 	sweep = 0;
 	measure_cnt = 0;
-	dyn_meas_cnt = 0;
 	n_cycles = pars.value_or_default<int>("cycles", 300);
 	n_warmup = pars.value_or_default<int>("warmup", 100000);
 	n_prebin = pars.value_or_default<int>("prebin", 500);
@@ -70,7 +69,7 @@ mc::mc(const std::string& dir)
 	config.measure.add_vectorobservable("<n_r n_0>", config.l.max_distance() + 1,
 		n_prebin);
 	
-	qmc.add_measure(measure_estimator{config, config.measure, pars,
+	qmc.add_measure(measure_estimator{config, pars,
 		std::vector<double>(config.l.max_distance() + 1, 0.0)}, "measurement");
 	
 	//Initialize configuration class
@@ -120,16 +119,19 @@ void mc::write(const std::string& dir)
 	std::ofstream f(dir+"bins");
 	if (is_thermalized())
 	{
-		f << "Thermalization: Done." << std::endl;
-		f << "Sweeps: " << (sweep - n_warmup) << std::endl;
-		f << "Bins: " << static_cast<int>((sweep - n_warmup) / n_prebin)
+		f << "Thermalization: Done." << std::endl
+			<< "Sweeps: " << (sweep - n_warmup) << std::endl
+			<< "Static bins: " << static_cast<int>(measure_static_cnt / n_prebin)
+			<< std::endl
+			<< "Dynamic bins: " << static_cast<int>(measure_dyn_cnt / n_prebin)
 			<< std::endl;
 	}
 	else
 	{
-		f << "Thermalization: " << sweep << std::endl;
-		f << "Sweeps: 0" << std::endl;
-		f << "Bins: 0" << std::endl;
+		f << "Thermalization: " << sweep << std::endl
+			<< "Sweeps: 0" << std::endl
+			<< "Static bins: 0" << std::endl
+			<< "Dynamic bins: 0" << std::endl;
 	}
 	f.close();
 }
@@ -172,7 +174,6 @@ bool mc::is_thermalized()
 
 void mc::do_update()
 {
-	int n_dyn_cycles = 5;
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		qmc.do_update(config.measure);
@@ -181,6 +182,7 @@ void mc::do_update()
 			++measure_cnt;
 			if (n_cycles == measure_cnt)
 			{
+				++measure_static_cnt;
 				qmc.do_measurement();
 				measure_cnt = 0;
 			}
@@ -190,13 +192,8 @@ void mc::do_update()
 	}
 	if (is_thermalized())
 	{
-		++dyn_meas_cnt;
-		if (dyn_meas_cnt == n_dyn_cycles)
-		{
-			qmc.trigger_event("dyn_measure");
-			dyn_meas_cnt = 0;
-			++sweep;
-		}
+		++measure_dyn_cnt;
+		qmc.trigger_event("dyn_measure");
 	}
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
@@ -208,6 +205,7 @@ void mc::do_update()
 			++measure_cnt;
 			if (n_cycles == measure_cnt)
 			{
+				++measure_static_cnt;
 				qmc.do_measurement();
 				measure_cnt = 0;
 			}
@@ -215,16 +213,10 @@ void mc::do_update()
 	}
 	if (is_thermalized())
 	{
-		++dyn_meas_cnt;
-		if (dyn_meas_cnt == n_dyn_cycles)
-		{
-			qmc.trigger_event("dyn_measure");
-			dyn_meas_cnt = 0;
-			++sweep;
-		}
+		++measure_dyn_cnt;
+		qmc.trigger_event("dyn_measure");
 	}
-	if (!is_thermalized())
-		++sweep;
+	++sweep;
 	if (!is_thermalized())
 		qmc.trigger_event("max_order");
 	if (sweep == n_warmup)
@@ -241,4 +233,8 @@ void mc::do_measurement()
 {}
 
 void mc::status()
-{}
+{
+//	if (sweep % 500 == 0)
+//		std::cout << "sweep: " << sweep << ", static_meas=" << measure_static_cnt
+//			<< ", dyn_meas=" << measure_dyn_cnt << std::endl;
+}

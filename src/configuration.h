@@ -15,12 +15,12 @@ struct configuration
 {
 	lattice l;
 	parameters param;
-	measurements measure;
+	measurements& measure;
 	fast_update<qr_stabilizer> M;
 	std::vector<int> shellsize;
 
-	configuration(Random& rng)
-		: l{}, param{}, measure{}, M{rng, l, param, measure}
+	configuration(Random& rng, measurements& measure_)
+		: l(), param(), measure(measure_), M{rng, l, param, measure}
 	{}
 
 	void initialize(int max_order)
