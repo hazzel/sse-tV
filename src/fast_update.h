@@ -9,6 +9,7 @@
 #include "lattice.h"
 #include "parameters.h"
 #include "Random.h"
+#include "spline.h"
 #include "wick_base.h"
 
 template<typename stabilizer_t>
@@ -21,9 +22,9 @@ class fast_update
 		using sparse_t = Eigen::SparseMatrix<double>;
 
 		fast_update(Random& rng_, const lattice& l_, const parameters& param_,
-			measurements& measure_)
+			measurements& measure_, spline& trig_spline_)
 			: rng(rng_), l(l_), param(param_), measure(measure_),
-				n_non_ident{0, 0},
+				trig_spline(trig_spline_), n_max_order(0), n_non_ident{0, 0},
 				update_time_displaced_gf(false),
 				equal_time_gf{}, time_displaced_gf{},
 				stabilizer{measure, equal_time_gf, time_displaced_gf}
@@ -480,20 +481,22 @@ class fast_update
 			// 1 = forward, -1 = backward
 			int direction = current_vertex == 0 ? 1 : -1;
 			// Time grid for Matsubara frequency measurement
-			std::vector<double> random_times(n_non_ident[0] + n_non_ident[1] + 1);
-			std::for_each(random_times.begin(), random_times.end(), [&](double& t)
-				{ t = rng() * param.beta; } );
-			random_times.front() = 0.;
-			random_times.back() = param.beta;
-			std::sort(random_times.begin(), random_times.end());
+			if (omega_n_max > 0)
+			{
+				random_times.resize(n_non_ident[0] + n_non_ident[1] + 1);
+				std::for_each(random_times.begin(), random_times.end(),
+					[&](double& t) { t = rng() * param.beta; } );
+				random_times.front() = 0.;
+				random_times.back() = param.beta;
+				std::sort(random_times.begin(), random_times.end());
+			}
 		
-			/*	
+/*
 			alglib::real_1d_array time_mesh;
 			int Ntau = n_non_ident[0] + n_non_ident[1] + 1;
 			time_mesh.setlength(Ntau);
 			for (int i = 0; i < Ntau; ++i)
 				time_mesh[i] = random_times[i];
-				time_mesh[i] = rng() * param.beta;
 			time_mesh[0] = 0.; time_mesh[Ntau - 1] = param.beta;
 			boost::multi_array<alglib::spline1dinterpolant, 2> spline(boost::
 				extents[dyn_mat.size()][omega_n_max]);
@@ -502,7 +505,7 @@ class fast_update
 			for (int i = 0; i < y_mesh.shape()[0]; ++i)
 				for (int j = 0; j < y_mesh.shape()[1]; ++j)
 					y_mesh[i][j].setlength(Ntau);
-			*/
+*/
 
 			// Time grid for imaginary time measurement
 			std::vector<int> time_pos(time_grid.size(), 0);
@@ -514,33 +517,32 @@ class fast_update
 			for (int n = 0; n <= n_max_order; ++n)
 			{
 				// Matsubara frequency measurement
-//				if (current_vertex == 0 || (current_vertex > 0 &&
-//					bond_list[current_vertex - 1] > 0))
-				if (current_vertex > 0 && bond_list[current_vertex - 1] > 0)
+				if (omega_n_max > 0)
 				{
-					for (int i = 0; i < dyn_mat.size(); ++i)
+					if (current_vertex > 0 && bond_list[current_vertex - 1] > 0)
 					{
-						// omega_n = 0 is a special case
-						if (omega_n_max > 0)
+						for (int i = 0; i < dyn_mat.size(); ++i)
 						{
+							// omega_n = 0 is a special case
 							dyn_mat[i][0] += obs[i].get_obs(equal_time_gf,
-								time_displaced_gf)
-								* (random_times[t+1] - random_times[t]);
+								time_displaced_gf);
 //							y_mesh[i][0][t] = obs[i].get_obs(equal_time_gf,
 //								time_displaced_gf);
+							for (int omega_n = 1; omega_n < omega_n_max; ++omega_n)
+							{
+								double pi = 3.14159265359;
+								double omega = 2. * pi * omega_n / param.beta;
+								dyn_mat[i][omega_n] += obs[i].get_obs(equal_time_gf,
+									time_displaced_gf)
+									* (std::sin(omega * random_times[t+1])
+									- std::sin(omega * random_times[t])) / omega;
+//								y_mesh[i][omega_n][t] = obs[i].get_obs(equal_time_gf,
+//									time_displaced_gf) *	trig_spline.cos(omega
+//									* time_mesh[t]);
+							}
 						}
-						for (int omega_n = 1; omega_n < omega_n_max; ++omega_n)
-						{
-							double omega = 2.*4.*std::atan(1.) * omega_n / param.beta;
-							dyn_mat[i][omega_n] += obs[i].get_obs(equal_time_gf,
-								time_displaced_gf)
-								* (std::sin(omega * random_times[t+1])
-								- std::sin(omega * random_times[t])) / omega;
-//							y_mesh[i][omega_n][t] = obs[i].get_obs(equal_time_gf,
-//								time_displaced_gf) * std::cos(omega * time_mesh[t]);
-						}
+						++t;
 					}
-					++t;
 				}
 				// Imaginary time measurement
 				if (current_vertex == 0 || (current_vertex > 0 &&
@@ -583,11 +585,11 @@ class fast_update
 					}
 					catch(alglib::ap_error e)
 					{
-						for (int i = 1; i < Ntau-1; ++i)
-							if (std::abs(time_mesh[i] == time_mesh[i+1]))
+						for (int t = 1; t < Ntau-2; ++t)
+							if (time_mesh[t] == time_mesh[t+1])
 							{
-								time_mesh[i] = rng() * (time_mesh[i+1] - time_mesh[i-1])
-									+ time_mesh[i-1];
+								time_mesh[t] = rng() * (time_mesh[t+1] - time_mesh[t-1])
+									+ time_mesh[t-1];
 							}
 						alglib::spline1dbuildakima(time_mesh, y_mesh[i][j],
 							spline[i][j]);
@@ -606,7 +608,7 @@ class fast_update
 		void assign_random_times(const std::vector<double>& time_grid,
 			std::vector<int>& time_pos)
 		{
-			std::vector<double> random_times(n_non_ident[0] + n_non_ident[1]);
+			random_times.resize(n_non_ident[0] + n_non_ident[1]);
 			std::for_each(random_times.begin(), random_times.end(), [&](double& t)
 				{ t = rng() * param.beta; } );
 			std::sort(random_times.begin(), random_times.end());
@@ -625,6 +627,7 @@ class fast_update
 		const lattice& l;
 		const parameters& param;
 		measurements& measure;
+		const spline& trig_spline;
 		std::vector<std::pair<int, int>> lattice_bonds;
 		std::vector<int> bond_list;
 		int current_vertex;
@@ -633,6 +636,7 @@ class fast_update
 		std::vector<int> n_non_ident;
 		int n_intervals;
 		bool update_time_displaced_gf;
+		std::vector<double> random_times;
 		dmatrix_t equal_time_gf;
 		dmatrix_t time_displaced_gf;
 		std::vector<sparse_t> vertex_matrices;

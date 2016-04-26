@@ -80,7 +80,7 @@ mc::mc(const std::string& dir)
 	qmc.add_event(event_build{config, rng}, "initial build");
 	qmc.add_event(event_max_order{config, rng}, "max_order");
 	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin,
-		{"M2", "sp"}}, "dyn_measure");
+		{"M2"}}, "dyn_measure");
 //		{"M2", "epsilon", "sp", "tp"}}, "dyn_measure");
 //		{"M2", "kekule", "epsilon", "sp", "tp"}}, "dyn_measure");
 	//Initialize vertex list to reduce warm up time
@@ -180,7 +180,8 @@ void mc::do_update()
 		if (is_thermalized())
 		{
 			++measure_cnt;
-			if (n_cycles == measure_cnt)
+//			if (n_cycles == measure_cnt)
+			if (n == config.M.max_order() / 2)
 			{
 				++measure_static_cnt;
 				qmc.do_measurement();
@@ -203,7 +204,8 @@ void mc::do_update()
 		if (is_thermalized())
 		{
 			++measure_cnt;
-			if (n_cycles == measure_cnt)
+//			if (n_cycles == measure_cnt)
+			if (n == config.M.max_order() / 2)
 			{
 				++measure_static_cnt;
 				qmc.do_measurement();
@@ -221,10 +223,12 @@ void mc::do_update()
 		qmc.trigger_event("max_order");
 	if (sweep == n_warmup)
 	{
-		qmc.set_proposal_rates({static_cast<double>(config.M.non_ident(0)),
-			static_cast<double>(std::max(5, config.M.non_ident(1)))});
-		std::cout << "Max order set to " << config.M.max_order() << "."
-			<< std::endl;
+//		qmc.set_proposal_rates({static_cast<double>(config.M.non_ident(0)),
+//			static_cast<double>(std::max(20, config.M.non_ident(1)))});
+		qmc.set_proposal_rates({0.99, 0.01});
+		std::cout << "Max order set to " << config.M.max_order()
+			<< ", proposal rates set to p1=" << qmc.get_proposal_rates()[0]
+			<< ", p2=" << qmc.get_proposal_rates()[1] << "." << std::endl;
 	}
 	status();
 }

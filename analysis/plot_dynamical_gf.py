@@ -20,6 +20,9 @@ import scipy.integrate
 def FitFunction(x, a, b, c):
 	return a + b*np.exp(-c*x)
 
+def LinearFunction(x, a, b):
+	return a - b*x
+
 def combinatorial_factor(n, k):
 	prod = Decimal(1)
 	for j in range(n + 1):
@@ -56,6 +59,7 @@ marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 filelist = []
 filelist.append(glob.glob("../bin/job/*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.355-T0.15/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L3-V1.0-T0.10/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.0-T0.04/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
@@ -101,48 +105,53 @@ for f in filelist:
 			ed_data = parse_ed_file(ed_file)
 			n_ed_tau = int(ed_data[0][8])
 			n_ed_mat = int(ed_data[0][9])
+			ed_tau = np.linspace(0., 1./T, n_ed_tau + 1)
 
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
-		x_mat = (np.array(range(0, n_matsubara)) * 2. + (1.-parity)/2.) * np.pi * T
-		y_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[0])
-		err_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[1])
 		x_tau = np.array(range(0, n_discrete_tau + 1)) / float(n_discrete_tau) / T / 2
 		y_tau = np.abs(np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]))[:n_discrete_tau+1]
 		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])[:n_discrete_tau+1]
+		y_tau_log = np.log(y_tau)
+		err_tau_log = err_tau / y_tau
+		
+		if n_matsubara > 0:
+			x_mat = (np.array(range(0, n_matsubara)) * 2. + (1.-parity)/2.) * np.pi * T
+			y_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[0])
+			err_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[1])
 
-		N_bootstrap = 25
-		x_delta = np.array(range(1, n_matsubara))
-		y_delta = []
-		for j in range(N_bootstrap):
-			y_delta.append(np.zeros(n_matsubara - 1))
-			y_boot = np.zeros(n_matsubara)
-			for k in range(len(y_boot)):
-				y_boot[k] = y_mat[k] + np.random.normal(0., 0.01 * abs(y_mat[k]))
-			for n in range(1, n_matsubara):
-				y_delta[j][n-1] = estimator(n, 1./T, y_boot, parity)
+			N_bootstrap = 1000
+			x_delta = np.array(range(1, n_matsubara))
+			y_delta = []
+			for j in range(N_bootstrap):
+				y_delta.append(np.zeros(n_matsubara - 1))
+				y_boot = np.zeros(n_matsubara)
+				for k in range(len(y_boot)):
+					y_boot[k] = y_mat[k] + np.random.normal(0., 0.01 * abs(y_mat[k]))
+				for n in range(1, n_matsubara):
+					y_delta[j][n-1] = estimator(n, 1./T, y_boot, parity)
 
 		ax1.set_xlabel(r"$\omega_n$")
 		ax1.set_ylabel(r"$M_2(\omega_n) \cdot \omega_n^2$")
-		xscale = np.copy(x_mat)
-		xscale[0] = 1.
-		xscale = xscale**2.
-		ax1.plot(x_mat, y_mat * xscale, marker="o", color="green", markersize=10.0, linestyle="None", linewidth=0.0)
-		(_, caps, _) = ax1.errorbar(x_mat, y_mat * xscale, yerr=err_mat * xscale, marker='None', capsize=8, color="green")
-		for cap in caps:
-			cap.set_markeredgewidth(1.4)
+		if n_matsubara > 0:
+			xscale = np.copy(x_mat)
+			xscale[0] = 1.
+			xscale = xscale**2.
+			ax1.plot(x_mat, y_mat * xscale, marker="o", color="green", markersize=10.0, linestyle="None", linewidth=0.0)
+			(_, caps, _) = ax1.errorbar(x_mat, y_mat * xscale, yerr=err_mat * xscale, marker='None', capsize=8, color="green")
+			for cap in caps:
+				cap.set_markeredgewidth(1.4)
 		if len(ed_glob) > 0:
 			x_mat = (np.array(range(0, n_ed_mat)) * 2. + (1.-parity)/2.) * np.pi * T
 			xscale = np.copy(x_mat)
 			xscale[0] = 1.
 			xscale = xscale**2.
 			ax1.plot(x_mat, ed_data[ed_n+1] * xscale, marker='o', color="r", markersize=10.0, linewidth=2.0)
-			
-			ed_tau = np.linspace(0., 1./T, n_ed_tau + 1)
-			y_num_int = np.zeros(n_ed_mat)
-			for n in range(n_ed_mat):
-				y_num_int[n] = scipy.integrate.simps(ed_data[ed_n] * np.cos(ed_tau * x_mat[n]), ed_tau)
-			ax1.plot(x_mat, y_num_int * xscale, marker='o', color="b", markersize=10.0, linewidth=2.0)
+
+			#y_num_int = np.zeros(n_ed_mat)
+			#for n in range(n_ed_mat):
+			#	y_num_int[n] = scipy.integrate.simps(ed_data[ed_n] * np.cos(ed_tau * x_mat[n]), ed_tau)
+			#ax1.plot(x_mat, y_num_int * xscale, marker='o', color="b", markersize=10.0, linewidth=2.0)
 
 		ax2.set_xlabel(r"$\tau$")
 		ax2.set_ylabel(r"$M_2(\tau)$")
@@ -152,33 +161,35 @@ for f in filelist:
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
 		if len(ed_glob) > 0:
-			ax2.plot(np.linspace(0., 1./T, n_ed_tau + 1)[:len(ed_data[ed_n])/2], ed_data[ed_n][:len(ed_data[ed_n])/2], marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
-			#ax2.plot(np.linspace(0., 1./T, n_ed_tau + 1), np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
+			ax2.plot(ed_tau[:len(ed_data[ed_n])/2+1], ed_data[ed_n][:len(ed_data[ed_n])/2+1], marker='o', color="r", markersize=10.0, linewidth=0.0, label=r'$L='+str(int(L))+'$')
+			#ax2.plot(ed_tau, np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
-		try:
-			nmin = len(x_tau)*0/32; nmax = len(x_tau)*28/32
-			#nmin = len(x_tau)*10/16; nmax = len(x_tau)*14/16
-			#nmin = len(x_tau)*17/32; nmax = len(x_tau)*32/32
-			#nmin = 0; nmax = len(x_tau)*2/16
-			parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
-			#parameter, perr = curve_fit(FitFunction, x_tau[nmin:nmax], y_tau[nmin:nmax], p0=[0.01, 0.01, 1.])
-			#parameter, perr = curve_fit( FitFunction, np.linspace(0., 1./T, n_ed_tau + 1)[:n_ed_tau/2-2], ed_data[ed_n][:n_ed_tau/2-2], p0=[-0.00001, 0.08, 1.15])
-			px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
-			ax2.plot(px, FitFunction(px, *parameter), 'k-', linewidth=3.0)
-			d = -int(np.log10(abs(perr[2])))+2
-			ax2.text(0.10, 0.98, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(parameter[2]) + "(" + str(round(perr[2], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
-			#ax2.text(0.05, 0.92, r"$\Delta_{ED} = 0.9264$", transform=ax2.transAxes, fontsize=20, va='top')
-			print parameter
-			print perr
-		except:
-			print "runtime error"
+		nmin = len(x_tau)*0/32; nmax = len(x_tau)*32/32-1
+		#nmin = len(x_tau)*10/16; nmax = len(x_tau)*14/16
+		#nmin = len(x_tau)*17/32; nmax = len(x_tau)*32/32
+		#nmin = 0; nmax = len(x_tau)*2/16
+		parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau_log[nmin:nmax], LinearFunction, datayerrors=err_tau_log[nmin:nmax])
+		px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
+		ax2.plot(px, np.exp(LinearFunction(px, *parameter)), 'k-', linewidth=3.0)
+		d = -int(np.log10(abs(perr[1])))+2
+		ax2.text(0.10, 0.98, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(parameter[1]) + "(" + str(round(perr[1], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
+		print parameter
+		print perr
+		
+		if len(ed_glob) > 0:
+			parameter_ed, perr_ed = scipy.optimize.curve_fit( LinearFunction, ed_tau[:len(ed_data[ed_n])/2], np.log(ed_data[ed_n])[:len(ed_data[ed_n])/2])
+			px = np.linspace(ed_tau[0], ed_tau[len(ed_data[ed_n])/2], 1000)
+			ax2.plot(px, np.exp(LinearFunction(px, *parameter_ed)), 'r-', linewidth=3.0)
+			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(parameter_ed[1]) + "$", transform=ax2.transAxes, fontsize=20, va='top')
+			print parameter_ed
 		
 		ax3.set_xlabel(r"$n$")
 		ax3.set_ylabel(r"$\Delta_n$")
-		ax3.plot(x_delta, np.mean(y_delta, axis=0), marker="o", color="green", markersize=10.0, linewidth=2.0)
-		(_, caps, _) = ax3.errorbar(x_delta, np.mean(y_delta, axis=0), yerr=np.std(y_delta, axis=0), marker="None", color="green", markersize=10.0, linewidth=2.0)
-		for cap in caps:
-			cap.set_markeredgewidth(1.4)
+		if n_matsubara > 0:
+			ax3.plot(x_delta, np.mean(y_delta, axis=0), marker="o", color="green", markersize=10.0, linewidth=2.0)
+			(_, caps, _) = ax3.errorbar(x_delta, np.mean(y_delta, axis=0), yerr=np.std(y_delta, axis=0), marker="None", color="green", markersize=10.0, linewidth=2.0)
+			for cap in caps:
+				cap.set_markeredgewidth(1.4)
 
 		if len(ed_glob) > 0:
 			x_delta = np.array(range(1, n_ed_mat))

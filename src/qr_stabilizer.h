@@ -184,13 +184,8 @@ class qr_stabilizer
 				std::cout << "error in stab: " << (old_gf - equal_time_gf).norm()
 					<< std::endl;
 			if ((old_td_gf - time_displaced_gf).norm() > 0.0000001)
-			{
 				std::cout << "error in td stab: " << (old_td_gf - time_displaced_gf)
 					.norm() << std::endl;
-				print_matrix(old_td_gf);
-				print_matrix(time_displaced_gf);
-				std::cout << "====" << std::endl;
-			}
 		}
 	private:
 		void print_matrix(const dmatrix_t& m)

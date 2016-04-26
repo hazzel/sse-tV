@@ -25,9 +25,8 @@ struct wick_M2
 		double M2 = 0.;
 		for (int i = 0; i < config.l.n_sites(); ++i)
 			for (int j = 0; j < config.l.n_sites(); ++j)
-				M2 += td_gf(i, j) * td_gf(i, j)
-					/ std::pow(config.l.n_sites(), 2.);
-		return M2;
+				M2 += td_gf(i, j) * td_gf(i, j);
+		return M2 / std::pow(config.l.n_sites(), 2.);
 	}
 };
 
@@ -94,14 +93,13 @@ struct wick_sp
 	double get_obs(const matrix_t& et_gf, const matrix_t& td_gf)
 	{
 		double sp = 0.;
-		double pi = 4.*std::atan(1.);
-		Eigen::Vector2d K(2.*pi/9., 2.*pi/9.*(2.-1./std::sqrt(3.)));
+		auto& K = config.l.symmetry_point("K");
 		for (int i = 0; i < config.l.n_sites(); ++i)
 			for (int j = 0; j < config.l.n_sites(); ++j)
 			{
 				auto& r_i = config.l.real_space_coord(i);
 				auto& r_j = config.l.real_space_coord(j);
-				sp +=	std::cos(K.dot(r_j - r_i)) * td_gf(i, j);
+				sp +=	config.trig_spline.cos(K.dot(r_j - r_i)) * td_gf(i, j);
 			}
 		return sp;
 	}
@@ -122,7 +120,7 @@ struct wick_tp
 	{
 		double tp = 0.;
 		double pi = 4.*std::atan(1.);
-		Eigen::Vector2d K(2.*pi/9., 2.*pi/9.*(2.-1./std::sqrt(3.)));
+		auto& K = config.l.symmetry_point("K");
 		for (int i = 0; i < config.l.n_sites(); ++i)
 			for (int j = 0; j < config.l.n_sites(); ++j)
 				for (int m = 0; m < config.l.n_sites(); ++m)
@@ -132,7 +130,7 @@ struct wick_tp
 						auto& r_j = config.l.real_space_coord(j);
 						auto& r_m = config.l.real_space_coord(m);
 						auto& r_n = config.l.real_space_coord(n);
-						tp += std::cos(K.dot(r_j - r_i + r_m - r_n))
+						tp += config.trig_spline.cos(K.dot(r_j - r_i + r_m - r_n))
 							* (td_gf(i, m) * td_gf(j, n)
 							- td_gf(i, n) * td_gf(j, m));
 					}
