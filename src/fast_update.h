@@ -450,15 +450,8 @@ class fast_update
 		double measure_epsilon(const dmatrix_t& gf)
 		{
 			double ep = 0.;
-			for (int i = 0; i < l.n_sites(); ++i)
-				for (int j : l.neighbors(i, "nearest neighbors"))	
-					for (int m = 0; m < l.n_sites(); ++m)
-						for (int n : l.neighbors(m, "nearest neighbors"))
-						{
-							ep += (equal_time_gf(j, i) * equal_time_gf(m, n)
-								- equal_time_gf(m, i) * equal_time_gf(j, n))
-								/ l.n_bonds() / l.n_bonds();
-						}
+			for (auto& i : l.bonds("nearest neighbors"))
+				ep += -equal_time_gf(i.second, i.first) / l.n_bonds();
 			return ep;
 		}
 	

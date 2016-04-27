@@ -109,9 +109,9 @@ for f in filelist:
 
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
-		x_tau = np.array(range(0, n_discrete_tau + 1)) / float(n_discrete_tau) / T / 2
-		y_tau = np.abs(np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]))[:n_discrete_tau+1]
-		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])[:n_discrete_tau+1]
+		x_tau = np.array(range(0, 2*n_discrete_tau + 1)) / float(2*n_discrete_tau) / T
+		y_tau = np.abs(np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]))
+		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
 		y_tau_log = np.log(y_tau)
 		err_tau_log = err_tau / y_tau
 		
@@ -161,10 +161,10 @@ for f in filelist:
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
 		if len(ed_glob) > 0:
-			ax2.plot(ed_tau[:len(ed_data[ed_n])/2+1], ed_data[ed_n][:len(ed_data[ed_n])/2+1], marker='o', color="r", markersize=10.0, linewidth=0.0, label=r'$L='+str(int(L))+'$')
+			ax2.plot(ed_tau, ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=0.0, label=r'$L='+str(int(L))+'$')
 			#ax2.plot(ed_tau, np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
-		nmin = len(x_tau)*0/32; nmax = len(x_tau)*32/32-1
+		nmin = len(x_tau)*0/32; nmax = len(x_tau)*16/32
 		#nmin = len(x_tau)*10/16; nmax = len(x_tau)*14/16
 		#nmin = len(x_tau)*17/32; nmax = len(x_tau)*32/32
 		#nmin = 0; nmax = len(x_tau)*2/16

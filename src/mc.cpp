@@ -225,7 +225,7 @@ void mc::do_update()
 	{
 //		qmc.set_proposal_rates({static_cast<double>(config.M.non_ident(0)),
 //			static_cast<double>(std::max(20, config.M.non_ident(1)))});
-		qmc.set_proposal_rates({0.99, 0.01});
+//		qmc.set_proposal_rates({0.99, 0.01});
 		std::cout << "Max order set to " << config.M.max_order()
 			<< ", proposal rates set to p1=" << qmc.get_proposal_rates()[0]
 			<< ", p2=" << qmc.get_proposal_rates()[1] << "." << std::endl;

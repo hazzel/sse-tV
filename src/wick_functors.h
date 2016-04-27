@@ -67,16 +67,14 @@ struct wick_epsilon
 	double get_obs(const matrix_t& et_gf, const matrix_t& td_gf)
 	{
 		double ep = 0.;
-		for (int i = 0; i < config.l.n_sites(); ++i)
-			for (int j : config.l.neighbors(i, "nearest neighbors"))	
-				for (int m = 0; m < config.l.n_sites(); ++m)
-					for (int n : config.l.neighbors(m, "nearest neighbors"))
-					{
-						ep += (et_gf(j, i) * et_gf(m, n)
-							+ config.l.parity(i) * config.l.parity(m) * td_gf(i, m)
-								* td_gf(j, n)) / std::pow(config.l.n_bonds(), 2.);
-					}
-		return ep;
+		for (auto& i : config.l.bonds("nearest neighbors"))
+			for (auto& n : config.l.bonds("nearest neighbors"))
+			{
+				ep += (et_gf(i.second, i.first) * et_gf(n.first, n.second)
+					+ config.l.parity(i.first) * config.l.parity(n.first)
+					* td_gf(i.first, n.first) * td_gf(i.second, n.second));
+			}
+		return ep / std::pow(config.l.n_bonds(), 2.);
 	}
 };
 
