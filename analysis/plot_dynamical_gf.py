@@ -64,6 +64,7 @@ filelist.append(glob.glob("../bin/job/*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.0-T0.04/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T1.0/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.13/*task*.out"))
 filelist.sort()
 
 filelist = [item for sublist in filelist for item in sublist]
@@ -112,15 +113,22 @@ for f in filelist:
 		x_tau = np.array(range(0, 2*n_discrete_tau + 1)) / float(2*n_discrete_tau) / T
 		y_tau = np.abs(np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]))
 		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
+		y_tau = y_tau[numpy.isfinite(y_tau)]
+		err_tau = err_tau[numpy.isfinite(err_tau)]
+		#Average over 0,beta/2 and beta/2,beta
+		y_tau = (y_tau + np.flipud(y_tau))/2.
+		err_tau = np.sqrt(np.square(err_tau) + np.square(np.flipud(err_tau)))/2.
 		y_tau_log = np.log(y_tau)
 		err_tau_log = err_tau / y_tau
 		
 		if n_matsubara > 0:
-			x_mat = (np.array(range(0, n_matsubara)) * 2. + (1.-parity)/2.) * np.pi * T
+			x_mat = (np.array(range(0, n_matsubara)) * (2. + (1.-parity)/2.)) * np.pi * T
 			y_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[0])
 			err_mat = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_mat")[1])
+			y_mat = y_mat[numpy.isfinite(y_mat)]
+			err_mat = err_mat[numpy.isfinite(err_mat)]
 
-			N_bootstrap = 1000
+			N_bootstrap = 10000
 			x_delta = np.array(range(1, n_matsubara))
 			y_delta = []
 			for j in range(N_bootstrap):
@@ -164,23 +172,24 @@ for f in filelist:
 			ax2.plot(ed_tau, ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=0.0, label=r'$L='+str(int(L))+'$')
 			#ax2.plot(ed_tau, np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
-		nmin = len(x_tau)*0/32; nmax = len(x_tau)*16/32
-		#nmin = len(x_tau)*10/16; nmax = len(x_tau)*14/16
-		#nmin = len(x_tau)*17/32; nmax = len(x_tau)*32/32
+		#nmin = len(x_tau)*0/32; nmax = len(x_tau)*10/32
+		nmin = len(x_tau)*18/32; nmax = len(x_tau)*32/32-1
 		#nmin = 0; nmax = len(x_tau)*2/16
-		parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau_log[nmin:nmax], LinearFunction, datayerrors=err_tau_log[nmin:nmax])
+		parameter, perr = fit_function( [0.1, 0.1, -1.], x_tau[nmin:nmax], y_tau_log[nmin:nmax], LinearFunction, datayerrors=err_tau_log[nmin:nmax])
 		px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
 		ax2.plot(px, np.exp(LinearFunction(px, *parameter)), 'k-', linewidth=3.0)
 		d = -int(np.log10(abs(perr[1])))+2
-		ax2.text(0.10, 0.98, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(parameter[1]) + "(" + str(round(perr[1], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
+		ax2.text(0.10, 0.98, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(abs(parameter[1])) + "(" + str(round(perr[1], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
 		print parameter
 		print perr
 		
 		if len(ed_glob) > 0:
-			parameter_ed, perr_ed = scipy.optimize.curve_fit( LinearFunction, ed_tau[:len(ed_data[ed_n])/2], np.log(ed_data[ed_n])[:len(ed_data[ed_n])/2])
-			px = np.linspace(ed_tau[0], ed_tau[len(ed_data[ed_n])/2], 1000)
+			#parameter_ed, perr_ed = scipy.optimize.curve_fit( LinearFunction, ed_tau[:len(ed_data[ed_n])/2], np.log(ed_data[ed_n])[:len(ed_data[ed_n])/2])
+			#px = np.linspace(ed_tau[0], ed_tau[len(ed_data[ed_n])/2], 1000)
+			parameter_ed, perr_ed = scipy.optimize.curve_fit( LinearFunction, ed_tau[len(ed_data[ed_n])/2+3:], np.log(ed_data[ed_n])[len(ed_data[ed_n])/2+3:])
+			px = np.linspace(ed_tau[len(ed_data[ed_n])/2], ed_tau[len(ed_data[ed_n])-1], 1000)
 			ax2.plot(px, np.exp(LinearFunction(px, *parameter_ed)), 'r-', linewidth=3.0)
-			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(parameter_ed[1]) + "$", transform=ax2.transAxes, fontsize=20, va='top')
+			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[1])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
 			print parameter_ed
 		
 		ax3.set_xlabel(r"$n$")

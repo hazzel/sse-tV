@@ -191,11 +191,11 @@ void mc::do_update()
 		config.M.advance_backward();
 		config.M.stabilize_backward();
 	}
-	if (is_thermalized())
-	{
-		++measure_dyn_cnt;
-		qmc.trigger_event("dyn_measure");
-	}
+//	if (is_thermalized())
+//	{
+//		++measure_dyn_cnt;
+//		qmc.trigger_event("dyn_measure");
+//	}
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		config.M.advance_forward();
@@ -223,9 +223,9 @@ void mc::do_update()
 		qmc.trigger_event("max_order");
 	if (sweep == n_warmup)
 	{
-//		qmc.set_proposal_rates({static_cast<double>(config.M.non_ident(0)),
-//			static_cast<double>(std::max(20, config.M.non_ident(1)))});
-//		qmc.set_proposal_rates({0.99, 0.01});
+		qmc.set_proposal_rates({static_cast<double>(config.M.non_ident(0)),
+			static_cast<double>(std::max(20, config.M.non_ident(1)))});
+		qmc.set_proposal_rates({0.99, 0.01});
 		std::cout << "Max order set to " << config.M.max_order()
 			<< ", proposal rates set to p1=" << qmc.get_proposal_rates()[0]
 			<< ", p2=" << qmc.get_proposal_rates()[1] << "." << std::endl;

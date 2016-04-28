@@ -473,18 +473,23 @@ class fast_update
 		{
 			// 1 = forward, -1 = backward
 			int direction = current_vertex == 0 ? 1 : -1;
+			double pi = 4. * std::atan(1.);
+			
+			// Time grid for imaginary time measurement
+			std::vector<int> time_pos(time_grid.size(), 0);
+			assign_random_times(time_grid, time_pos);
+			
 			// Time grid for Matsubara frequency measurement
 			if (omega_n_max > 0)
 			{
-				random_times.resize(n_non_ident[0] + n_non_ident[1] + 1);
+				random_times.resize(n_non_ident[0] + n_non_ident[1] + 2);
 				std::for_each(random_times.begin(), random_times.end(),
 					[&](double& t) { t = rng() * param.beta; } );
 				random_times.front() = 0.;
 				random_times.back() = param.beta;
 				std::sort(random_times.begin(), random_times.end());
 			}
-		
-/*
+/*		
 			alglib::real_1d_array time_mesh;
 			int Ntau = n_non_ident[0] + n_non_ident[1] + 1;
 			time_mesh.setlength(Ntau);
@@ -498,12 +503,7 @@ class fast_update
 			for (int i = 0; i < y_mesh.shape()[0]; ++i)
 				for (int j = 0; j < y_mesh.shape()[1]; ++j)
 					y_mesh[i][j].setlength(Ntau);
-*/
-
-			// Time grid for imaginary time measurement
-			std::vector<int> time_pos(time_grid.size(), 0);
-			assign_random_times(time_grid, time_pos);
-
+*/			
 			enable_time_displaced_gf(direction);
 			time_displaced_gf = equal_time_gf;
 			int tau_pt = 0, pos_pt = 0, t = 0;
@@ -512,26 +512,26 @@ class fast_update
 				// Matsubara frequency measurement
 				if (omega_n_max > 0)
 				{
-					if (current_vertex > 0 && bond_list[current_vertex - 1] > 0)
+					if (current_vertex == 0 ||  (current_vertex > 0 &&
+						bond_list[current_vertex - 1] > 0))
 					{
 						for (int i = 0; i < dyn_mat.size(); ++i)
 						{
 							// omega_n = 0 is a special case
 							dyn_mat[i][0] += obs[i].get_obs(equal_time_gf,
-								time_displaced_gf);
+								time_displaced_gf) * (random_times[t+1]
+								- random_times[t]);
 //							y_mesh[i][0][t] = obs[i].get_obs(equal_time_gf,
 //								time_displaced_gf);
 							for (int omega_n = 1; omega_n < omega_n_max; ++omega_n)
 							{
-								double pi = 3.14159265359;
 								double omega = 2. * pi * omega_n / param.beta;
 								dyn_mat[i][omega_n] += obs[i].get_obs(equal_time_gf,
 									time_displaced_gf)
 									* (std::sin(omega * random_times[t+1])
 									- std::sin(omega * random_times[t])) / omega;
 //								y_mesh[i][omega_n][t] = obs[i].get_obs(equal_time_gf,
-//									time_displaced_gf) *	trig_spline.cos(omega
-//									* time_mesh[t]);
+//									time_displaced_gf) *	std::cos(omega * time_mesh[t]);
 							}
 						}
 						++t;
@@ -566,8 +566,7 @@ class fast_update
 				current_vertex = 0;
 			else if (direction == -1)
 				current_vertex = n_max_order;
-
-			/*
+/*
 			for (int i = 0; i < dyn_mat.size(); ++i)
 				for (int j = 0; j < dyn_mat[i].size(); ++j)
 				{
@@ -590,7 +589,7 @@ class fast_update
 					dyn_mat[i][j] = alglib::spline1dintegrate(spline[i][j],
 						param.beta);
 				}
-			*/
+*/
 		}
 		
 		const dmatrix_t& measure_time_displaced_gf()
