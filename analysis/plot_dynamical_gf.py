@@ -20,6 +20,9 @@ import scipy.integrate
 def FitFunction(x, a, b, c):
 	return a + b*np.exp(-c*x)
 
+def ExpSumFunction(x, a, b, c, d):
+	return a + b*np.exp(-d*x) + c*np.exp(d*x)
+
 def LinearFunction(x, a, b):
 	return a - b*x
 
@@ -73,7 +76,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "M2"
+	obs = "epsilon"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -113,11 +116,11 @@ for f in filelist:
 		x_tau = np.array(range(0, 2*n_discrete_tau + 1)) / float(2*n_discrete_tau) / T
 		y_tau = np.abs(np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]))
 		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
-		y_tau = y_tau[numpy.isfinite(y_tau)]
-		err_tau = err_tau[numpy.isfinite(err_tau)]
+		y_tau = y_tau[numpy.isfinite(y_tau)] - ArrangePlot(elist[i], "epsilon")[0][0]**2.
+		err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "epsilon")[0][0]*ArrangePlot(elist[i], "epsilon")[1][0])**2.)
 		#Average over 0,beta/2 and beta/2,beta
-		y_tau = (y_tau + np.flipud(y_tau))/2.
-		err_tau = np.sqrt(np.square(err_tau) + np.square(np.flipud(err_tau)))/2.
+		#y_tau = (y_tau + np.flipud(y_tau))/2.
+		#err_tau = np.sqrt(np.square(err_tau) + np.square(np.flipud(err_tau)))/2.
 		y_tau_log = np.log(y_tau)
 		err_tau_log = err_tau / y_tau
 		
@@ -172,26 +175,31 @@ for f in filelist:
 			ax2.plot(ed_tau, ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=0.0, label=r'$L='+str(int(L))+'$')
 			#ax2.plot(ed_tau, np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
-		#nmin = len(x_tau)*0/32; nmax = len(x_tau)*10/32
-		nmin = len(x_tau)*18/32; nmax = len(x_tau)*32/32-1
+		'''
+		nmin = len(x_tau)*0/32; nmax = len(x_tau)*14/32
+		#nmin = len(x_tau)*18/32; nmax = len(x_tau)*32/32-1
 		#nmin = 0; nmax = len(x_tau)*2/16
-		parameter, perr = fit_function( [0.1, 0.1, -1.], x_tau[nmin:nmax], y_tau_log[nmin:nmax], LinearFunction, datayerrors=err_tau_log[nmin:nmax])
+		parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 		px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
-		ax2.plot(px, np.exp(LinearFunction(px, *parameter)), 'k-', linewidth=3.0)
-		d = -int(np.log10(abs(perr[1])))+2
-		ax2.text(0.10, 0.98, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(abs(parameter[1])) + "(" + str(round(perr[1], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
+		ax2.plot(px, FitFunction(px, *parameter), 'k-', linewidth=3.0)
+		d = -int(np.log10(abs(perr[2])))+2
+		ax2.text(0.10, 0.98, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(abs(parameter[2])) + "(" + str(round(perr[2], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
 		print parameter
 		print perr
 		
 		if len(ed_glob) > 0:
-			#parameter_ed, perr_ed = scipy.optimize.curve_fit( LinearFunction, ed_tau[:len(ed_data[ed_n])/2], np.log(ed_data[ed_n])[:len(ed_data[ed_n])/2])
-			#px = np.linspace(ed_tau[0], ed_tau[len(ed_data[ed_n])/2], 1000)
-			parameter_ed, perr_ed = scipy.optimize.curve_fit( LinearFunction, ed_tau[len(ed_data[ed_n])/2+3:], np.log(ed_data[ed_n])[len(ed_data[ed_n])/2+3:])
+			#parameter_ed, perr_ed = scipy.optimize.curve_fit( ExpSumFunction, ed_tau, ed_data[ed_n], p0=[0.1, 0.1, 0.1, 1.0])
+			#px = np.linspace(ed_tau[0], ed_tau[len(ed_data[ed_n])-1], 1000)
+			#ax2.plot(px, ExpSumFunction(px, *parameter_ed), 'r-', linewidth=3.0)
+			#ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[3])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
+			
+			parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunction, ed_tau[len(ed_data[ed_n])/2:-3], ed_data[ed_n][len(ed_data[ed_n])/2:-3], p0=[0.1, 0.1, -1.])
 			px = np.linspace(ed_tau[len(ed_data[ed_n])/2], ed_tau[len(ed_data[ed_n])-1], 1000)
-			ax2.plot(px, np.exp(LinearFunction(px, *parameter_ed)), 'r-', linewidth=3.0)
-			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[1])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
+			ax2.plot(px, FitFunction(px, *parameter_ed), 'r-', linewidth=3.0)
+			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[2])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
+			
 			print parameter_ed
-		
+		'''
 		ax3.set_xlabel(r"$n$")
 		ax3.set_ylabel(r"$\Delta_n$")
 		if n_matsubara > 0:

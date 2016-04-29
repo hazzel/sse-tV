@@ -71,8 +71,9 @@ struct wick_epsilon
 			for (auto& n : config.l.bonds("nearest neighbors"))
 			{
 				ep += (et_gf(i.second, i.first) * et_gf(n.first, n.second)
-					+ config.l.parity(i.first) * config.l.parity(n.first)
-					* td_gf(i.first, n.first) * td_gf(i.second, n.second));
+//					+ config.l.parity(i.first) * config.l.parity(n.first)
+//					* td_gf(i.first, n.first) * td_gf(i.second, n.second));
+					- td_gf(n.first, i.first) * td_gf(i.second, n.second));
 			}
 		return ep / std::pow(config.l.n_bonds(), 2.);
 	}
