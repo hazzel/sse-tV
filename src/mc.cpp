@@ -174,6 +174,7 @@ bool mc::is_thermalized()
 
 void mc::do_update()
 {
+	int dyn_cycle = 100;
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
 		qmc.do_update(config.measure);
@@ -181,7 +182,7 @@ void mc::do_update()
 		{
 			++measure_cnt;
 //			if (n_cycles == measure_cnt)
-			if (n == config.M.max_order() / 2)
+			if (n % config.M.max_order()/4 == 0)
 			{
 				++measure_static_cnt;
 				qmc.do_measurement();
@@ -191,7 +192,7 @@ void mc::do_update()
 		config.M.advance_backward();
 		config.M.stabilize_backward();
 	}
-	if (is_thermalized() && sweep % 10 == 5)
+	if (is_thermalized() && sweep % dyn_cycle == dyn_cycle/2)
 	{
 		++measure_dyn_cnt;
 		qmc.trigger_event("dyn_measure");
@@ -205,7 +206,7 @@ void mc::do_update()
 		{
 			++measure_cnt;
 //			if (n_cycles == measure_cnt)
-			if (n == config.M.max_order() / 2)
+			if (n % config.M.max_order()/4 == 0)
 			{
 				++measure_static_cnt;
 				qmc.do_measurement();
@@ -213,7 +214,7 @@ void mc::do_update()
 			}
 		}
 	}
-	if (is_thermalized() && sweep % 10 == 0)
+	if (is_thermalized() && sweep % dyn_cycle == 0)
 	{
 		++measure_dyn_cnt;
 		qmc.trigger_event("dyn_measure");
