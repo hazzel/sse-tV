@@ -60,7 +60,10 @@ color_cycle = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'orange', 'darkgreen']
 marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 
 filelist = []
-filelist.append(glob.glob("../bin/job/*.out"))
+#filelist.append(glob.glob("../bin/job/*.out"))
+filelist.append(glob.glob("../bin/job-2/*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.355-T0.05/*task*.out"))
+
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.355-T0.15/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L3-V1.0-T0.10/*task*.out"))
@@ -114,7 +117,7 @@ for f in filelist:
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
 		x_tau = np.array(range(0, 2*n_discrete_tau + 1)) / float(2*n_discrete_tau) / T
-		y_tau = np.abs(np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]))
+		y_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0])
 		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
 		if obs == "epsilon":
 			y_tau = y_tau[numpy.isfinite(y_tau)] - ArrangePlot(elist[i], "epsilon")[0][0]**2.
@@ -170,7 +173,7 @@ for f in filelist:
 
 		ax2.set_xlabel(r"$\tau$")
 		ax2.set_ylabel(r"$M_2(\tau)$")
-		ax2.set_yscale("log")
+		#ax2.set_yscale("log")
 		ax2.plot(x_tau, y_tau, marker="o", color="green", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		(_, caps, _) = ax2.errorbar(x_tau, y_tau, yerr=err_tau, marker='None', capsize=8, color="green")
 		for cap in caps:
@@ -180,7 +183,7 @@ for f in filelist:
 			#ax2.plot(ed_tau, np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 		#nmin = len(x_tau)*0/32; nmax = len(x_tau)*14/32
-		nmin = len(x_tau)*24/32; nmax = len(x_tau)*32/32-1
+		nmin = len(x_tau)*18/32; nmax = len(x_tau)*32/32-1
 		#nmin = 0; nmax = len(x_tau)*2/16
 		parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 		px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
@@ -189,14 +192,17 @@ for f in filelist:
 		ax2.text(0.10, 0.98, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(abs(parameter[2])) + "(" + str(round(perr[2], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
 		print parameter
 		print perr
-		
+
 		if len(ed_glob) > 0:
 			#parameter_ed, perr_ed = scipy.optimize.curve_fit( ExpSumFunction, ed_tau, ed_data[ed_n], p0=[0.1, 0.1, 0.1, 1.0])
 			#px = np.linspace(ed_tau[0], ed_tau[len(ed_data[ed_n])-1], 1000)
 			#ax2.plot(px, ExpSumFunction(px, *parameter_ed), 'r-', linewidth=3.0)
 			#ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[3])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
 			
-			parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunction, ed_tau[len(ed_data[ed_n])/2:-3], ed_data[ed_n][len(ed_data[ed_n])/2:-3], p0=[0.1, 0.1, 1.])
+			if obs == "epsilon":
+				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunction, ed_tau[len(ed_data[ed_n])/8:-3], ed_data[ed_n][len(ed_data[ed_n])/8:-3], p0=[0.1, 0.1, 1.])
+			else:
+				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunction, ed_tau[len(ed_data[ed_n])/2:-3], ed_data[ed_n][len(ed_data[ed_n])/2:-3], p0=[0.1, 0.1, 1.])
 			px = np.linspace(ed_tau[len(ed_data[ed_n])/2], ed_tau[len(ed_data[ed_n])-1], 1000)
 			ax2.plot(px, FitFunction(px, *parameter_ed), 'r-', linewidth=3.0)
 			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[2])) + "$", transform=ax2.transAxes, fontsize=20, va='top')

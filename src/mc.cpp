@@ -12,7 +12,8 @@ mc::mc(const std::string& dir)
 	pars.read_file(dir);
 	sweep = 0;
 	measure_cnt = 0;
-	n_cycles = pars.value_or_default<int>("cycles", 300);
+	n_static_cycles = pars.value_or_default<int>("static_cycles", 300);
+	n_dyn_cycles = pars.value_or_default<int>("dyn_cycles", 300);
 	n_warmup = pars.value_or_default<int>("warmup", 100000);
 	n_prebin = pars.value_or_default<int>("prebin", 500);
 	n_rebuild = pars.value_or_default<int>("rebuild", 1000);
@@ -53,9 +54,9 @@ mc::mc(const std::string& dir)
 		config.param.prop_V2);
 	
 	//Measure acceptance probabilities
-	config.measure.add_observable("update type 0", n_prebin * n_cycles);
-	config.measure.add_observable("update type 1", n_prebin * n_cycles);
-	config.measure.add_observable("sign", n_prebin * n_cycles);
+	config.measure.add_observable("update type 0", n_prebin * n_static_cycles);
+	config.measure.add_observable("update type 1", n_prebin * n_static_cycles);
+	config.measure.add_observable("sign", n_prebin * n_static_cycles);
 
 	//Set up measurements
 	config.measure.add_observable("M2", n_prebin);
@@ -121,9 +122,9 @@ void mc::write(const std::string& dir)
 	{
 		f << "Thermalization: Done." << std::endl
 			<< "Sweeps: " << (sweep - n_warmup) << std::endl
-			<< "Static bins: " << static_cast<int>(measure_static_cnt / n_prebin)
+			<< "Static bins: " << static_cast<int>(static_bin_cnt / n_prebin)
 			<< std::endl
-			<< "Dynamic bins: " << static_cast<int>(measure_dyn_cnt / n_prebin)
+			<< "Dynamic bins: " << static_cast<int>(dyn_bin_cnt / n_prebin)
 			<< std::endl;
 	}
 	else
@@ -180,22 +181,24 @@ void mc::do_update()
 		qmc.do_update(config.measure);
 		if (is_thermalized())
 		{
-			++measure_cnt;
-//			if (n_cycles == measure_cnt)
-			if (n % config.M.max_order()/4 == 0)
+			++measure_static_cnt;
+			if (n_static_cycles % measure_static_cnt == n_static_cycles / 2)
 			{
-				++measure_static_cnt;
+				++static_bin_cnt;
 				qmc.do_measurement();
-				measure_cnt = 0;
 			}
 		}
 		config.M.advance_backward();
 		config.M.stabilize_backward();
 	}
-	if (is_thermalized() && sweep % dyn_cycle == dyn_cycle/2)
+	if (is_thermalized())
 	{
 		++measure_dyn_cnt;
-		qmc.trigger_event("dyn_measure");
+		if (n_dyn_cycles % measure_dyn_cnt == n_dyn_cycles / 2)
+		{
+			++dyn_bin_cnt;
+			qmc.trigger_event("dyn_measure");
+		}
 	}
 	for (int n = 0; n < config.M.max_order(); ++n)
 	{
@@ -204,20 +207,24 @@ void mc::do_update()
 		config.M.stabilize_forward();
 		if (is_thermalized())
 		{
-			++measure_cnt;
-//			if (n_cycles == measure_cnt)
-			if (n % config.M.max_order()/4 == 0)
+			++measure_static_cnt;
+			if (n_static_cycles % measure_static_cnt == 0)
 			{
-				++measure_static_cnt;
+				++static_bin_cnt;
 				qmc.do_measurement();
-				measure_cnt = 0;
+				measure_static_cnt = 0;
 			}
 		}
 	}
-	if (is_thermalized() && sweep % dyn_cycle == 0)
+	if (is_thermalized())
 	{
 		++measure_dyn_cnt;
-		qmc.trigger_event("dyn_measure");
+		if (n_dyn_cycles % measure_dyn_cnt == 0)
+		{
+			++dyn_bin_cnt;
+			qmc.trigger_event("dyn_measure");
+			measure_dyn_cnt = 0;
+		}
 	}
 	++sweep;
 	if (!is_thermalized())

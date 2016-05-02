@@ -61,7 +61,8 @@ class mc
 		parser pars;
 		int sweep;
 		int measure_cnt;
-		int n_cycles;
+		int n_static_cycles;
+		int n_dyn_cycles;
 		int n_warmup;
 		int n_prebin;
 		int n_rebuild;
@@ -70,6 +71,8 @@ class mc
 
 		int measure_dyn_cnt = 0;
 		int measure_static_cnt = 0;
+		int dyn_bin_cnt = 0;
+		int static_bin_cnt = 0;
 
 		honeycomb hc;
 		configuration config;
