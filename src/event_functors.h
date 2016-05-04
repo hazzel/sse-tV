@@ -133,7 +133,9 @@ struct event_dynamic_measurement
 			std::fill(dyn_mat[i].begin(), dyn_mat[i].end(), 0.);
 			std::fill(dyn_tau[i].begin(), dyn_tau[i].end(), 0.);
 		}
-		config.M.measure_dynamical_observable(config.param.n_matsubara, time_grid,
+		//config.M.measure_dynamical_observable(config.param.n_matsubara, time_grid,
+		//	dyn_mat, dyn_tau, obs);
+		config.M.hirsch_fye_measurement(config.param.n_matsubara, time_grid,
 			dyn_mat, dyn_tau, obs);
 
 		for (int i = 0; i < dyn_mat.size(); ++i)

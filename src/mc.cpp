@@ -175,56 +175,61 @@ bool mc::is_thermalized()
 
 void mc::do_update()
 {
-	int dyn_cycle = 100;
-	for (int n = 0; n < config.M.max_order(); ++n)
+	for (int i = 0; i < n_dyn_cycles; ++i)
 	{
-		qmc.do_update(config.measure);
+		for (int n = 0; n < config.M.max_order(); ++n)
+		{
+			qmc.do_update(config.measure);
+			if (is_thermalized())
+			{
+				++measure_static_cnt;
+				if (measure_static_cnt % n_static_cycles == 0)
+				{
+					++static_bin_cnt;
+					qmc.do_measurement();
+					measure_static_cnt = 0;
+				}
+			}
+			config.M.advance_backward();
+			config.M.stabilize_backward();
+		}
 		if (is_thermalized())
 		{
-			++measure_static_cnt;
-			if (n_static_cycles % measure_static_cnt == n_static_cycles / 2)
+			++measure_dyn_cnt;
+			if (measure_dyn_cnt % n_dyn_cycles == n_dyn_cycles / 2)
 			{
-				++static_bin_cnt;
-				qmc.do_measurement();
+				++dyn_bin_cnt;
+				qmc.trigger_event("dyn_measure");
 			}
 		}
-		config.M.advance_backward();
-		config.M.stabilize_backward();
-	}
-	if (is_thermalized())
-	{
-		++measure_dyn_cnt;
-		if (n_dyn_cycles % measure_dyn_cnt == n_dyn_cycles / 2)
+		for (int n = 0; n < config.M.max_order(); ++n)
 		{
-			++dyn_bin_cnt;
-			qmc.trigger_event("dyn_measure");
+			config.M.advance_forward();
+			qmc.do_update(config.measure);
+			config.M.stabilize_forward();
+			if (is_thermalized())
+			{
+				++measure_static_cnt;
+				if (measure_static_cnt % n_static_cycles == 0)
+				{
+					++static_bin_cnt;
+					qmc.do_measurement();
+					measure_static_cnt = 0;
+				}
+			}
 		}
-	}
-	for (int n = 0; n < config.M.max_order(); ++n)
-	{
-		config.M.advance_forward();
-		qmc.do_update(config.measure);
-		config.M.stabilize_forward();
 		if (is_thermalized())
 		{
-			++measure_static_cnt;
-			if (n_static_cycles % measure_static_cnt == 0)
+			++measure_dyn_cnt;
+			if (measure_dyn_cnt % n_dyn_cycles == 0)
 			{
-				++static_bin_cnt;
-				qmc.do_measurement();
-				measure_static_cnt = 0;
+				++dyn_bin_cnt;
+				qmc.trigger_event("dyn_measure");
+				measure_dyn_cnt = 0;
 			}
 		}
-	}
-	if (is_thermalized())
-	{
-		++measure_dyn_cnt;
-		if (n_dyn_cycles % measure_dyn_cnt == 0)
-		{
-			++dyn_bin_cnt;
-			qmc.trigger_event("dyn_measure");
-			measure_dyn_cnt = 0;
-		}
+		if (!is_thermalized())
+			break;
 	}
 	++sweep;
 	if (!is_thermalized())

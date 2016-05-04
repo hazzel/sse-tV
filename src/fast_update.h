@@ -477,7 +477,13 @@ class fast_update
 			
 			// Time grid for imaginary time measurement
 			std::vector<int> time_pos(time_grid.size(), 0);
-			assign_random_times(time_grid, time_pos);
+			random_times.resize(n_non_ident[0] + n_non_ident[1]);
+			std::for_each(random_times.begin(), random_times.end(), [&](double& t)
+				{ t = rng() * param.beta; } );
+			std::sort(random_times.begin(), random_times.end());
+			for (int i = 0; i < time_pos.size(); ++i)
+				time_pos[i] = std::lower_bound(random_times.begin(),
+					random_times.end(), time_grid[i]) - random_times.begin();
 			
 			// Time grid for Matsubara frequency measurement
 			if (omega_n_max > 0)
@@ -489,21 +495,7 @@ class fast_update
 				random_times.back() = param.beta;
 				std::sort(random_times.begin(), random_times.end());
 			}
-/*		
-			alglib::real_1d_array time_mesh;
-			int Ntau = n_non_ident[0] + n_non_ident[1] + 1;
-			time_mesh.setlength(Ntau);
-			for (int i = 0; i < Ntau; ++i)
-				time_mesh[i] = random_times[i];
-			time_mesh[0] = 0.; time_mesh[Ntau - 1] = param.beta;
-			boost::multi_array<alglib::spline1dinterpolant, 2> spline(boost::
-				extents[dyn_mat.size()][omega_n_max]);
-			boost::multi_array<alglib::real_1d_array, 2> y_mesh(boost::extents
-				[dyn_mat.size()][omega_n_max]);
-			for (int i = 0; i < y_mesh.shape()[0]; ++i)
-				for (int j = 0; j < y_mesh.shape()[1]; ++j)
-					y_mesh[i][j].setlength(Ntau);
-*/			
+			
 			enable_time_displaced_gf(direction);
 			time_displaced_gf = equal_time_gf;
 			int tau_pt = 0, pos_pt = 0, t = 0;
@@ -521,8 +513,6 @@ class fast_update
 							dyn_mat[i][0] += obs[i].get_obs(equal_time_gf,
 								time_displaced_gf) * (random_times[t+1]
 								- random_times[t]);
-//							y_mesh[i][0][t] = obs[i].get_obs(equal_time_gf,
-//								time_displaced_gf);
 							for (int omega_n = 1; omega_n < omega_n_max; ++omega_n)
 							{
 								double omega = 2. * pi * omega_n / param.beta;
@@ -530,8 +520,6 @@ class fast_update
 									time_displaced_gf)
 									* (std::sin(omega * random_times[t+1])
 									- std::sin(omega * random_times[t])) / omega;
-//								y_mesh[i][omega_n][t] = obs[i].get_obs(equal_time_gf,
-//									time_displaced_gf) *	std::cos(omega * time_mesh[t]);
 							}
 						}
 						++t;
@@ -566,40 +554,17 @@ class fast_update
 				current_vertex = 0;
 			else if (direction == -1)
 				current_vertex = n_max_order;
-/*
-			for (int i = 0; i < dyn_mat.size(); ++i)
-				for (int j = 0; j < dyn_mat[i].size(); ++j)
-				{
-					try
-					{
-						alglib::spline1dbuildakima(time_mesh, y_mesh[i][j],
-							spline[i][j]);
-					}
-					catch(alglib::ap_error e)
-					{
-						for (int t = 1; t < Ntau-2; ++t)
-							if (time_mesh[t] == time_mesh[t+1])
-							{
-								time_mesh[t] = rng() * (time_mesh[t+1] - time_mesh[t-1])
-									+ time_mesh[t-1];
-							}
-						alglib::spline1dbuildakima(time_mesh, y_mesh[i][j],
-							spline[i][j]);
-					}
-					dyn_mat[i][j] = alglib::spline1dintegrate(spline[i][j],
-						param.beta);
-				}
-*/
 		}
 		
-		const dmatrix_t& measure_time_displaced_gf()
+		void hirsch_fye_measurement(int omega_n_max,
+			const std::vector<double>& time_grid,
+			std::vector<std::vector<double>>& dyn_mat,
+			std::vector<std::vector<double>>& dyn_tau,
+			const std::vector<wick_base<dmatrix_t>>& obs)
 		{
-			return time_displaced_gf;
-		}
-	private:
-		void assign_random_times(const std::vector<double>& time_grid,
-			std::vector<int>& time_pos)
-		{
+			double pi = 4. * std::atan(1.);
+			// Time grid for imaginary time measurement
+			std::vector<int> time_pos(time_grid.size(), 0);
 			random_times.resize(n_non_ident[0] + n_non_ident[1]);
 			std::for_each(random_times.begin(), random_times.end(), [&](double& t)
 				{ t = rng() * param.beta; } );
@@ -607,8 +572,65 @@ class fast_update
 			for (int i = 0; i < time_pos.size(); ++i)
 				time_pos[i] = std::lower_bound(random_times.begin(),
 					random_times.end(), time_grid[i]) - random_times.begin();
-		}
 
+			std::vector<int> bond_pos(random_times.size() + 1);
+			bond_pos[0] = 0;
+			int cnt = 1;
+			for (int n = 1; n <= n_max_order; ++n)
+			{
+				if (bond_list[n-1] > 0)
+				{
+					bond_pos[cnt] = n;
+					++cnt;
+				}
+			}
+			
+			int Ns = l.n_sites(), Nt = time_grid.size();
+			dmatrix_t O = dmatrix_t::Zero(Ns * Nt, Ns * Nt);
+			for (int i = 0; i < Nt; ++i)
+			{
+				O.block(i * Ns, i * Ns, Ns, Ns) = id_N;
+				if (i < Nt - 1)
+					O.block((i+1) * Ns, i * Ns, Ns, Ns) = -propagator(
+						bond_pos[time_pos[i+1]], bond_pos[time_pos[i]]);
+			}
+			O.block(0, (Nt-1) * Ns, Ns, Ns) = propagator(bond_pos[time_pos[0]], 0);
+			dmatrix_t G = O.inverse();
+			dmatrix_t et_gf = dmatrix_t::Zero(Ns, Ns);
+			std::vector<dmatrix_t> td_gf(Nt, dmatrix_t::Zero(Ns, Ns));
+			std::vector<int> td_cnt(Nt, 0);
+			for (int t = 0; t < Nt; ++t)
+			{
+				et_gf += G.block(t * Ns, t * Ns, Ns, Ns) / Nt;
+				for (int p = t; p < Nt; ++p)
+				{
+					td_gf[p-t] += G.block(p * Ns, t * Ns, Ns, Ns)/(Nt-p+t);
+//					td_gf[p-t] += (G.block(p * Ns, t * Ns, Ns, Ns)
+//						+ G.block(t * Ns, p * Ns, Ns, Ns))/2./(Nt-p+t);
+				}
+			}
+
+			if (G.hasNaN())
+			{
+				std::cout << "nan value" << std::endl;
+				measure_dynamical_observable(omega_n_max, time_grid, dyn_mat,
+					dyn_tau, obs);
+				return;
+			}
+
+			// Imaginary time measurement
+			for (int t = 0; t < Nt; ++t)
+			{
+				for (int i = 0; i < dyn_tau.size(); ++i)
+					dyn_tau[i][t] = obs[i].get_obs(et_gf, td_gf[t]);
+			}
+		}
+		
+		const dmatrix_t& measure_time_displaced_gf()
+		{
+			return time_displaced_gf;
+		}
+	private:
 		void print_matrix(const dmatrix_t& m)
 		{
 			Eigen::IOFormat clean(4, 0, ", ", "\n", "[", "]");
