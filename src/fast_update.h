@@ -574,7 +574,6 @@ class fast_update
 					random_times.end(), time_grid[i]) - random_times.begin();
 
 			std::vector<int> bond_pos(random_times.size() + 1);
-			bond_pos[0] = 0;
 			int cnt = 1;
 			for (int n = 1; n <= n_max_order; ++n)
 			{
@@ -584,6 +583,7 @@ class fast_update
 					++cnt;
 				}
 			}
+			bond_pos[0] = 0;
 			
 			int Ns = l.n_sites(), Nt = time_grid.size();
 			dmatrix_t O = dmatrix_t::Zero(Ns * Nt, Ns * Nt);
@@ -597,19 +597,11 @@ class fast_update
 			O.block(0, (Nt-1) * Ns, Ns, Ns) = propagator(bond_pos[time_pos[0]], 0);
 			dmatrix_t G = O.inverse();
 			dmatrix_t et_gf = dmatrix_t::Zero(Ns, Ns);
+			int r = rng() * Nt;
+			et_gf = G.block(r * Ns, r * Ns, Ns, Ns);
 			std::vector<dmatrix_t> td_gf(Nt, dmatrix_t::Zero(Ns, Ns));
-			std::vector<int> td_cnt(Nt, 0);
 			for (int t = 0; t < Nt; ++t)
-			{
-				et_gf += G.block(t * Ns, t * Ns, Ns, Ns) / Nt;
-				for (int p = t; p < Nt; ++p)
-				{
-					td_gf[p-t] += G.block(p * Ns, t * Ns, Ns, Ns)/(Nt-p+t);
-//					td_gf[p-t] += (G.block(p * Ns, t * Ns, Ns, Ns)
-//						+ G.block(t * Ns, p * Ns, Ns, Ns))/2./(Nt-p+t);
-				}
-			}
-
+				td_gf[t] = G.block(t * Ns, 0, Ns, Ns);
 			if (G.hasNaN())
 			{
 				std::cout << "nan value" << std::endl;
