@@ -602,6 +602,7 @@ class fast_update
 			std::vector<dmatrix_t> td_gf(Nt, dmatrix_t::Zero(Ns, Ns));
 			for (int t = 0; t < Nt; ++t)
 				td_gf[t] = G.block(t * Ns, 0, Ns, Ns);
+		
 			if (G.hasNaN())
 			{
 				std::cout << "nan value" << std::endl;
@@ -612,10 +613,8 @@ class fast_update
 
 			// Imaginary time measurement
 			for (int t = 0; t < Nt; ++t)
-			{
 				for (int i = 0; i < dyn_tau.size(); ++i)
 					dyn_tau[i][t] = obs[i].get_obs(et_gf, td_gf[t]);
-			}
 		}
 		
 		const dmatrix_t& measure_time_displaced_gf()

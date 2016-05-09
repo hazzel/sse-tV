@@ -126,8 +126,8 @@ for f in filelist:
 			y_tau = y_tau[numpy.isfinite(y_tau)]
 			err_tau = err_tau[numpy.isfinite(err_tau)]
 		#Average over 0,beta/2 and beta/2,beta
-		#y_tau = (y_tau + np.flipud(y_tau))/2.
-		#err_tau = np.sqrt(np.square(err_tau) + np.square(np.flipud(err_tau)))/2.
+		y_tau = (y_tau + np.flipud(y_tau))/2.
+		err_tau = np.sqrt(np.square(err_tau) + np.square(np.flipud(err_tau)))/2.
 		y_tau_log = np.log(np.abs(y_tau))
 		err_tau_log = err_tau / y_tau
 		
@@ -182,7 +182,7 @@ for f in filelist:
 			ax2.plot(ed_tau, ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=0.0, label=r'$L='+str(int(L))+'$')
 			#ax2.plot(ed_tau, np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
-		'''
+		
 		#nmin = len(x_tau)*0/32; nmax = len(x_tau)*14/32
 		nmin = len(x_tau)*18/32; nmax = len(x_tau)*32/32-1
 		#nmin = 0; nmax = len(x_tau)*2/16
@@ -209,7 +209,7 @@ for f in filelist:
 			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[2])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
 			
 			print parameter_ed
-		'''
+		
 		
 		ax3.set_xlabel(r"$n$")
 		ax3.set_ylabel(r"$\Delta_n$")
