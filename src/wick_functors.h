@@ -23,14 +23,10 @@ struct wick_M2
 	double get_obs(const matrix_t& et_gf, const matrix_t& td_gf)
 	{
 		double M2 = 0.;
+		int i = rng() * config.l.n_sites();
 		for (int i = 0; i < config.l.n_sites(); ++i)
 			for (int j = 0; j < config.l.n_sites(); ++j)
 				M2 += td_gf(i, j) * td_gf(i, j);
-				{
-//					double d_ij = (i == j) ? 1. : 0.;
-//					M2 += (-d_ij * config.l.parity(i) * config.l.parity(j)
-//						+ td_gf(i, j)) * td_gf(i, j);
-				}
 		return M2 / std::pow(config.l.n_sites(), 2.);
 	}
 };

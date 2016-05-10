@@ -117,8 +117,8 @@ for f in filelist:
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
 		x_tau = np.array(range(0, 2*n_discrete_tau + 1)) / float(2*n_discrete_tau) / T
-		y_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0])
-		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
+		y_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]) / 8.
+		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1]) / 8.
 		if obs == "epsilon":
 			y_tau = y_tau[numpy.isfinite(y_tau)] - ArrangePlot(elist[i], "epsilon")[0][0]**2.
 			err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "epsilon")[0][0]*ArrangePlot(elist[i], "epsilon")[1][0])**2.)
@@ -184,7 +184,7 @@ for f in filelist:
 		
 		
 		#nmin = len(x_tau)*0/32; nmax = len(x_tau)*14/32
-		nmin = len(x_tau)*18/32; nmax = len(x_tau)*32/32-1
+		nmin = len(x_tau)*20/32; nmax = len(x_tau)*32/32-1
 		#nmin = 0; nmax = len(x_tau)*2/16
 		parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 		px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
