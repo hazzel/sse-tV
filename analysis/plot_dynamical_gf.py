@@ -117,8 +117,8 @@ for f in filelist:
 		figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
 		
 		x_tau = np.array(range(0, 2*n_discrete_tau + 1)) / float(2*n_discrete_tau) / T
-		y_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0]) / 8.
-		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1]) / 8.
+		y_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0])
+		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
 		if obs == "epsilon":
 			y_tau = y_tau[numpy.isfinite(y_tau)] - ArrangePlot(elist[i], "epsilon")[0][0]**2.
 			err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "epsilon")[0][0]*ArrangePlot(elist[i], "epsilon")[1][0])**2.)
@@ -126,10 +126,8 @@ for f in filelist:
 			y_tau = y_tau[numpy.isfinite(y_tau)]
 			err_tau = err_tau[numpy.isfinite(err_tau)]
 		#Average over 0,beta/2 and beta/2,beta
-		y_tau = (y_tau + np.flipud(y_tau))/2.
-		err_tau = np.sqrt(np.square(err_tau) + np.square(np.flipud(err_tau)))/2.
-		y_tau_log = np.log(np.abs(y_tau))
-		err_tau_log = err_tau / y_tau
+		#y_tau = (y_tau + np.flipud(y_tau))/2.
+		#err_tau = np.sqrt(np.square(err_tau) + np.square(np.flipud(err_tau)))/2.
 		
 		if n_matsubara > 0:
 			x_mat = (np.array(range(0, n_matsubara)) * (2. + (1.-parity)/2.)) * np.pi * T
@@ -159,7 +157,7 @@ for f in filelist:
 			(_, caps, _) = ax1.errorbar(x_mat, y_mat * xscale, yerr=err_mat * xscale, marker='None', capsize=8, color="green")
 			for cap in caps:
 				cap.set_markeredgewidth(1.4)
-		if len(ed_glob) > 0:
+		if len(ed_data) > ed_n:
 			x_mat = (np.array(range(0, n_ed_mat)) * 2. + (1.-parity)/2.) * np.pi * T
 			xscale = np.copy(x_mat)
 			xscale[0] = 1.
@@ -178,11 +176,11 @@ for f in filelist:
 		(_, caps, _) = ax2.errorbar(x_tau, y_tau, yerr=err_tau, marker='None', capsize=8, color="green")
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
-		if len(ed_glob) > 0:
+		if len(ed_data) > ed_n:
 			ax2.plot(ed_tau, ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=0.0, label=r'$L='+str(int(L))+'$')
 			#ax2.plot(ed_tau, np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
-		
+		'''
 		#nmin = len(x_tau)*0/32; nmax = len(x_tau)*14/32
 		nmin = len(x_tau)*20/32; nmax = len(x_tau)*32/32-1
 		#nmin = 0; nmax = len(x_tau)*2/16
@@ -194,7 +192,7 @@ for f in filelist:
 		print parameter
 		print perr
 
-		if len(ed_glob) > 0:
+		if len(ed_data) > ed_n:
 			#parameter_ed, perr_ed = scipy.optimize.curve_fit( ExpSumFunction, ed_tau, ed_data[ed_n], p0=[0.1, 0.1, 0.1, 1.0])
 			#px = np.linspace(ed_tau[0], ed_tau[len(ed_data[ed_n])-1], 1000)
 			#ax2.plot(px, ExpSumFunction(px, *parameter_ed), 'r-', linewidth=3.0)
@@ -209,7 +207,7 @@ for f in filelist:
 			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[2])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
 			
 			print parameter_ed
-		
+		'''
 		
 		ax3.set_xlabel(r"$n$")
 		ax3.set_ylabel(r"$\Delta_n$")
@@ -219,7 +217,7 @@ for f in filelist:
 			for cap in caps:
 				cap.set_markeredgewidth(1.4)
 
-		if len(ed_glob) > 0:
+		if len(ed_data) > ed_n:
 			x_delta = np.array(range(1, n_ed_mat))
 			y_delta = np.zeros(n_ed_mat - 1)
 			for n in range(1, n_ed_mat):
