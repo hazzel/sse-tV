@@ -99,7 +99,8 @@ struct wick_sp
 				auto& r_i = config.l.real_space_coord(i);
 				auto& r_j = config.l.real_space_coord(j);
 				//sp +=	config.trig_spline.cos(K.dot(r_j - r_i)) * td_gf(i, j);
-				sp +=	std::cos(-K.dot(r_i - r_j)) * td_gf(i, j);
+				sp +=	std::cos(-K.dot(r_i - r_j)) * td_gf(i, j)
+					* config.l.parity(i) * config.l.parity(j);
 			}
 		return sp;
 	}
@@ -133,7 +134,9 @@ struct wick_tp
 						//tp += config.trig_spline.cos(K.dot(r_j - r_i + r_m - r_n))
 						tp += std::cos(-K.dot(r_i - r_j - r_m + r_n))
 							* (td_gf(i, m) * td_gf(j, n)
-							- td_gf(i, n) * td_gf(j, m));
+							- td_gf(i, n) * td_gf(j, m))
+							* config.l.parity(i) * config.l.parity(j)
+							* config.l.parity(m) * config.l.parity(n);
 					}
 		return tp;
 	}
