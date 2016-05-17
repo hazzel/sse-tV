@@ -25,7 +25,10 @@ struct wick_M2
 		double M2 = 0.;
 		for (int i = 0; i < config.l.n_sites(); ++i)
 			for (int j = 0; j < config.l.n_sites(); ++j)
+			{
 				M2 += td_gf(i, j) * td_gf(i, j);
+//				M2 += -config.l.parity(i) * config.l.parity(j) * et_gf(j, i) * et_gf(i, j);
+			}
 		return M2 / std::pow(config.l.n_sites(), 2.);
 	}
 };
@@ -46,9 +49,10 @@ struct wick_kekule
 		for (auto& a : config.l.bonds("kekule"))
 			for (auto& b : config.l.bonds("kekule"))
 			{
-				kek += (et_gf(a.second, a.first) * et_gf(b.first,
-					b.second) - td_gf(b.first, a.first)
-					* td_gf(a.second, b.second));
+//				kek += et_gf(a.second, a.first) * et_gf(b.first,
+//					b.second) - td_gf(b.first, a.first)
+//					* td_gf(a.second, b.second);
+				kek += td_gf(b.first, a.first) * td_gf(a.second, b.second);
 			}
 		return kek;
 	}
@@ -70,10 +74,9 @@ struct wick_epsilon
 		for (auto& i : config.l.bonds("nearest neighbors"))
 			for (auto& n : config.l.bonds("nearest neighbors"))
 			{
-				ep += (et_gf(i.second, i.first) * et_gf(n.first, n.second)
-//					+ config.l.parity(i.first) * config.l.parity(n.first)
-//					* td_gf(i.first, n.first) * td_gf(i.second, n.second));
-					- td_gf(n.first, i.first) * td_gf(i.second, n.second));
+//				ep += (et_gf(i.second, i.first) * et_gf(n.first, n.second)
+//					- td_gf(n.first, i.first) * td_gf(i.second, n.second));
+				ep += td_gf(n.first, i.first) * td_gf(i.second, n.second);
 			}
 		return ep / std::pow(config.l.n_bonds(), 2.);
 	}
