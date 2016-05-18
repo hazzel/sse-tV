@@ -76,7 +76,9 @@ struct wick_epsilon
 			{
 //				ep += (et_gf(i.second, i.first) * et_gf(n.first, n.second)
 //					- td_gf(n.first, i.first) * td_gf(i.second, n.second));
-				ep += td_gf(n.first, i.first) * td_gf(i.second, n.second);
+//				ep += config.l.parity(n.first) * config.l.parity(i.first)
+//					* td_gf(n.first, i.first) * td_gf(i.second, n.second);
+				ep +=	td_gf(n.first, i.first) * td_gf(i.second, n.second);
 			}
 		return ep / std::pow(config.l.n_bonds(), 2.);
 	}

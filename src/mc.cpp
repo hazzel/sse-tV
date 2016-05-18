@@ -81,7 +81,7 @@ mc::mc(const std::string& dir)
 	qmc.add_event(event_build{config, rng}, "initial build");
 	qmc.add_event(event_max_order{config, rng}, "max_order");
 	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin,
-		{"kekule", "epsilon"}}, "dyn_measure");
+		{"M2", "kekule", "sp", "epsilon"}}, "dyn_measure");
 //		{"M2", "sp", "tp"}}, "dyn_measure");
 //		{"M2", "epsilon", "sp", "tp"}}, "dyn_measure");
 //		{"M2", "kekule", "epsilon", "sp", "tp"}}, "dyn_measure");
@@ -115,6 +115,8 @@ void mc::write(const std::string& dir)
 	odump d(dir+"dump");
 	random_write(d);
 	d.write(sweep);
+	d.write(static_bin_cnt);
+	d.write(dyn_bin_cnt);
 	config.serialize(d);
 	d.close();
 	seed_write(dir+"seed");
@@ -149,6 +151,8 @@ bool mc::read(const std::string& dir)
 	{
 		random_read(d);
 		d.read(sweep);
+		d.read(static_bin_cnt);
+		d.read(dyn_bin_cnt);
 		config.serialize(d);
 		d.close();
 		return true;

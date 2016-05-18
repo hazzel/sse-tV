@@ -63,13 +63,14 @@ filelist = []
 filelist.append(glob.glob("../bin/job/*.out"))
 #filelist.append(glob.glob("../bin/job-2/*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.355-T0.05/*task*.out"))
-#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.04/*task*.out"))
-
-#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.355-T0.15/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.04/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
+
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L3-V1.0-T0.10/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.0-T0.04/*task*.out"))
-#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T0.5/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V0.5-T1.0/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.13/*task*.out"))
 filelist.sort()
@@ -80,7 +81,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "M2"
+	obs = "sp"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -129,8 +130,8 @@ for f in filelist:
 			y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
 			err_tau = err_tau[numpy.isfinite(err_tau)]
 		#Average over 0,beta/2 and beta/2,beta
-		y_tau = (y_tau + np.flipud(y_tau))/2.
-		err_tau = np.sqrt(np.square(err_tau) + np.square(np.flipud(err_tau)))/2.
+		#y_tau = (y_tau + np.flipud(y_tau))/2.
+		#err_tau = np.sqrt(np.square(err_tau) + np.square(np.flipud(err_tau)))/2.
 		
 		if n_matsubara > 0:
 			x_mat = (np.array(range(0, n_matsubara)) * (2. + (1.-parity)/2.)) * np.pi * T
@@ -185,7 +186,7 @@ for f in filelist:
 		
 		'''
 		#nmin = len(x_tau)*0/32; nmax = len(x_tau)*14/32
-		nmin = len(x_tau)*17/32; nmax = len(x_tau)*32/32-1
+		nmin = len(x_tau)*17/32; nmax = len(x_tau)*28/32-1
 		#nmin = 0; nmax = len(x_tau)*2/16
 		parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
 		px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
