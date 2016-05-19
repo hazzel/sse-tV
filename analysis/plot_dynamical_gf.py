@@ -17,7 +17,10 @@ from Fit import *
 from texify import *
 import scipy.integrate
 
-def FitFunction(x, a, b, c):
+def FitFunctionL(x, a, b, c):
+	return a + b*np.exp(-c*x)
+
+def FitFunctionR(x, a, b, c):
 	return a + b*np.exp(c*x)
 
 def ExpSumFunction(x, a, b, c, d):
@@ -81,7 +84,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "sp"
+	obs = "M2"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -184,13 +187,13 @@ for f in filelist:
 			ax2.plot(ed_tau, ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=0.0, label=r'$L='+str(int(L))+'$')
 			#ax2.plot(ed_tau, np.flipud(ed_data[ed_n]), marker='o', color="orange", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
-		'''
-		#nmin = len(x_tau)*0/32; nmax = len(x_tau)*14/32
-		nmin = len(x_tau)*17/32; nmax = len(x_tau)*28/32-1
+		
+		nmin = len(x_tau)*0/32+2; nmax = len(x_tau)*16/32
+		#nmin = len(x_tau)*17/32; nmax = len(x_tau)*28/32-1
 		#nmin = 0; nmax = len(x_tau)*2/16
-		parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunction, datayerrors=err_tau[nmin:nmax])
+		parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
 		px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
-		ax2.plot(px, FitFunction(px, *parameter), 'k-', linewidth=3.0)
+		ax2.plot(px, FitFunctionL(px, *parameter), 'k-', linewidth=3.0)
 		d = -int(np.log10(abs(perr[2])))+2
 		ax2.text(0.10, 0.98, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(abs(parameter[2])) + "(" + str(round(perr[2], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
 		print parameter
@@ -203,15 +206,19 @@ for f in filelist:
 			#ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[3])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
 			
 			if obs == "epsilon":
-				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunction, ed_tau[len(ed_data[ed_n])/8:-3], ed_data[ed_n][len(ed_data[ed_n])/8:-3], p0=[0.1, 0.1, 1.])
+				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[3:len(ed_data[ed_n])/2], ed_data[ed_n][3:len(ed_data[ed_n])/2], p0=[0.1, 0.1, 1.])
+			elif obs == "sp":
+				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[len(ed_data[ed_n])/4:len(ed_data[ed_n])/2], ed_data[ed_n][len(ed_data[ed_n])/4:len(ed_data[ed_n])/2], p0=[0.1, 0.1, 1.])
+				#parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionR, ed_tau[len(ed_data[ed_n])/2:len(ed_data[ed_n])-15], ed_data[ed_n][len(ed_data[ed_n])/2:len(ed_data[ed_n])-15], p0=[0.1, 0.1, 1.])
 			else:
-				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunction, ed_tau[len(ed_data[ed_n])/2:-3], ed_data[ed_n][len(ed_data[ed_n])/2:-3], p0=[0.1, 0.1, 1.])
-			px = np.linspace(ed_tau[len(ed_data[ed_n])/2], ed_tau[len(ed_data[ed_n])-1], 1000)
-			ax2.plot(px, FitFunction(px, *parameter_ed), 'r-', linewidth=3.0)
+				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[25:len(ed_data[ed_n])/2], ed_data[ed_n][25:len(ed_data[ed_n])/2], p0=[0.1, 0.1, 1.])
+			px = np.linspace(ed_tau[0], ed_tau[len(ed_data[ed_n])/2], 1000)
+			#px = np.linspace(ed_tau[len(ed_data[ed_n])/2], ed_tau[len(ed_data[ed_n])-1], 1000)
+			ax2.plot(px, FitFunctionL(px, *parameter_ed), 'r-', linewidth=3.0)
 			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[2])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
 			
 			print parameter_ed
-		'''
+		
 		
 		ax3.set_xlabel(r"$n$")
 		ax3.set_ylabel(r"$\Delta_n$")

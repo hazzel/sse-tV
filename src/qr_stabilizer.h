@@ -66,6 +66,7 @@ class qr_stabilizer
 				recompute_equal_time_gf(id_N, id_N, id_N, U.back(), D.back(),
 					V.back());
 				U.back() = id_N; D.back() = id_N; V.back() = id_N;
+				init = true;
 			}
 		}
 		
@@ -127,11 +128,14 @@ class qr_stabilizer
 			equal_time_gf = (inv_U_l * (qr_solver.colsPermutation()
 				* R.inverse())) * (invQ * inv_U_r);
 
-			measure.add("norm error", (old_gf - equal_time_gf).norm());
-			measure.add("max error", (old_gf - equal_time_gf).lpNorm<Eigen::
-				Infinity>());
-			measure.add("avg error", (old_gf - equal_time_gf).lpNorm<1>()
-				/ old_gf.rows() / old_gf.cols());
+			if (init)
+			{
+				measure.add("norm error", (old_gf - equal_time_gf).norm());
+				measure.add("max error", (old_gf - equal_time_gf).lpNorm<Eigen::
+					Infinity>());
+				measure.add("avg error", (old_gf - equal_time_gf).lpNorm<1>()
+					/ old_gf.rows() / old_gf.cols());
+			}
 		}
 		
 		void recompute_time_displaced_gf(const dmatrix_t& U_l_,
@@ -180,12 +184,15 @@ class qr_stabilizer
 			dmatrix_t old_gf = equal_time_gf;
 			equal_time_gf = lhs.bottomLeftCorner(N, N) * rhs.topRightCorner(N, N)
 				+ lhs.bottomRightCorner(N, N) * rhs.bottomRightCorner(N, N);
-			if ((old_gf - equal_time_gf).norm() > 0.0000001)
-				std::cout << "error in stab: " << (old_gf - equal_time_gf).norm()
-					<< std::endl;
-			if ((old_td_gf - time_displaced_gf).norm() > 0.0000001)
-				std::cout << "error in td stab: " << (old_td_gf - time_displaced_gf)
-					.norm() << std::endl;
+			if (init)
+			{
+				if ((old_gf - equal_time_gf).norm() > 0.0000001)
+					std::cout << "error in stab: " << (old_gf - equal_time_gf).norm()
+						<< std::endl;
+				if ((old_td_gf - time_displaced_gf).norm() > 0.0000001)
+					std::cout << "error in td stab: " << (old_td_gf
+						- time_displaced_gf).norm() << std::endl;
+			}
 		}
 	private:
 		void print_matrix(const dmatrix_t& m)
@@ -214,4 +221,5 @@ class qr_stabilizer
 		dmatrix_t D_r;
 		dmatrix_t V_r;
 		Eigen::ColPivHouseholderQR<dmatrix_t> qr_solver;
+		bool init = false;
 };

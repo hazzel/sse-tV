@@ -28,15 +28,15 @@ struct honeycomb
 
 	honeycomb(int L_ = 6)
 		: L(L_),
-//			a1(3./2., std::sqrt(3.)/2.), a2(3./2., -std::sqrt(3.)/2.),
-//			delta(1./2., std::sqrt(3.)/2.)
-			a1(std::sqrt(3.)/2., 0.), a2(std::sqrt(3.)/2., 3./2.),
-			delta(0., 1.)
+			a1(3./2., std::sqrt(3.)/2.), a2(3./2., -std::sqrt(3.)/2.),
+			delta(1./2., std::sqrt(3.)/2.)
+//			a1(std::sqrt(3.)/2., 0.), a2(std::sqrt(3.)/2., 3./2.),
+//			delta(0., 1.)
 	{
-//		b1 = Eigen::Vector2d(2.*pi/3., 2.*pi/std::sqrt(3.));
-//		b2 = Eigen::Vector2d(2.*pi/3., -2.*pi/std::sqrt(3.));
-		b1 = Eigen::Vector2d(2.*pi/std::sqrt(3.), -1./3.);
-		b2 = Eigen::Vector2d(0., 2./3.);
+		b1 = Eigen::Vector2d(2.*pi/3., 2.*pi/std::sqrt(3.));
+		b2 = Eigen::Vector2d(2.*pi/3., -2.*pi/std::sqrt(3.));
+//		b1 = Eigen::Vector2d(2.*pi/std::sqrt(3.), -1./3.);
+//		b2 = Eigen::Vector2d(0., 2./3.);
 	}
 
 	graph_t* graph()
@@ -115,14 +115,16 @@ struct honeycomb
 	{
 		//Symmetry points
 		std::map<std::string, Eigen::Vector2d> points;
-		/*
+
 		points["K"] = closest_k_point({2.*pi/3., 2.*pi/3./std::sqrt(3.)});
 		points["Kp"] = closest_k_point({2.*pi/3., -2.*pi/3./std::sqrt(3.)});
 		points["Gamma"] = closest_k_point({0., 0.});
 		points["M"] = closest_k_point({2.*pi/3., 0.});
-		*/
+
 //		points["K"] = {2.*pi/9., 2.*pi/9.*(2. - 1./std::sqrt(3.))};
-		points["K"] = {2.*pi/(3.*std::sqrt(3.)), 2.*pi/3.};
+//		points["K"] = {2.*pi/(3.*std::sqrt(3.)), 2.*pi/3.};
+		
+//		points["K"] = {2.*pi/3., 2.*pi/3./std::sqrt(3.)};
 
 		//Site maps
 		l.generate_neighbor_map("nearest neighbors", [&]

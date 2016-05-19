@@ -49,10 +49,8 @@ struct wick_kekule
 		for (auto& a : config.l.bonds("kekule"))
 			for (auto& b : config.l.bonds("kekule"))
 			{
-//				kek += et_gf(a.second, a.first) * et_gf(b.first,
-//					b.second) - td_gf(b.first, a.first)
-//					* td_gf(a.second, b.second);
-				kek += td_gf(b.first, a.first) * td_gf(a.second, b.second);
+				kek += - td_gf(b.first, a.first) * td_gf(a.second, b.second)
+					* config.l.parity(b.first) * config.l.parity(a.first);
 			}
 		return kek;
 	}
@@ -74,11 +72,8 @@ struct wick_epsilon
 		for (auto& i : config.l.bonds("nearest neighbors"))
 			for (auto& n : config.l.bonds("nearest neighbors"))
 			{
-//				ep += (et_gf(i.second, i.first) * et_gf(n.first, n.second)
-//					- td_gf(n.first, i.first) * td_gf(i.second, n.second));
-//				ep += config.l.parity(n.first) * config.l.parity(i.first)
-//					* td_gf(n.first, i.first) * td_gf(i.second, n.second);
-				ep +=	td_gf(n.first, i.first) * td_gf(i.second, n.second);
+				ep += - config.l.parity(i.first) * config.l.parity(n.first)
+					* td_gf(n.first, i.first) * td_gf(i.second, n.second);
 			}
 		return ep / std::pow(config.l.n_bonds(), 2.);
 	}
@@ -98,14 +93,13 @@ struct wick_sp
 	{
 		double sp = 0.;
 		auto& K = config.l.symmetry_point("K");
-		for (int i = 0; i < config.l.n_sites(); ++i)
+		int i = rng() * config.l.n_sites();
+//		for (int i = 0; i < config.l.n_sites(); ++i)
 			for (int j = 0; j < config.l.n_sites(); ++j)
 			{
 				auto& r_i = config.l.real_space_coord(i);
 				auto& r_j = config.l.real_space_coord(j);
-				//sp +=	config.trig_spline.cos(K.dot(r_j - r_i)) * td_gf(i, j);
-				sp +=	std::cos(-K.dot(r_i - r_j)) * td_gf(i, j)
-					* config.l.parity(i) * config.l.parity(j);
+				sp +=	std::cos(-K.dot(r_i - r_j)) * td_gf(i, j) * config.l.n_sites();
 			}
 		return sp;
 	}
