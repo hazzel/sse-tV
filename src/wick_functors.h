@@ -93,13 +93,13 @@ struct wick_sp
 	{
 		double sp = 0.;
 		auto& K = config.l.symmetry_point("K");
-		int i = rng() * config.l.n_sites();
-//		for (int i = 0; i < config.l.n_sites(); ++i)
+		double pi = 4.*std::atan(1.);
+		for (int i = 0; i < config.l.n_sites(); ++i)
 			for (int j = 0; j < config.l.n_sites(); ++j)
 			{
 				auto& r_i = config.l.real_space_coord(i);
 				auto& r_j = config.l.real_space_coord(j);
-				sp +=	std::cos(-K.dot(r_i - r_j)) * td_gf(i, j) * config.l.n_sites();
+				sp +=	std::cos(K.dot(r_i - r_j)) * td_gf(i, j);
 			}
 		return sp;
 	}
@@ -120,7 +120,7 @@ struct wick_tp
 	{
 		double tp = 0.;
 		double pi = 4.*std::atan(1.);
-		auto& K = config.l.symmetry_point("K");
+		Eigen::Vector2d K(2.*pi/9., 2.*pi/9.*(2.-1./std::sqrt(3.)));
 		for (int i = 0; i < config.l.n_sites(); ++i)
 			for (int j = 0; j < config.l.n_sites(); ++j)
 				for (int m = 0; m < config.l.n_sites(); ++m)

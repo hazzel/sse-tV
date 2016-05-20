@@ -81,7 +81,7 @@ mc::mc(const std::string& dir)
 	qmc.add_event(event_build{config, rng}, "initial build");
 	qmc.add_event(event_max_order{config, rng}, "max_order");
 	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin,
-		{"M2", "kekule", "sp", "epsilon"}}, "dyn_measure");
+		{"M2", "kekule", "sp", "tp", "epsilon"}}, "dyn_measure");
 //		{"M2", "sp", "tp"}}, "dyn_measure");
 //		{"M2", "epsilon", "sp", "tp"}}, "dyn_measure");
 //		{"M2", "kekule", "epsilon", "sp", "tp"}}, "dyn_measure");
