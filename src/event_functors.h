@@ -58,7 +58,8 @@ struct event_dynamic_measurement
 	std::vector<std::string> names;
 
 	event_dynamic_measurement(configuration& config_, Random& rng_,
-		int n_prebin, std::initializer_list<std::string> observables)
+//		int n_prebin, std::initializer_list<std::string> observables)
+		int n_prebin, const std::vector<std::string>& observables)
 		: config(config_), rng(rng_)
 	{
 		time_grid.resize(2 * config.param.n_discrete_tau + 1);
@@ -70,54 +71,25 @@ struct event_dynamic_measurement
 			dyn_mat.push_back(std::vector<double>(config.param.n_matsubara, 0.));
 			dyn_tau.push_back(std::vector<double>(2 * config.param.n_discrete_tau
 				+ 1, 0.));
+			
+			if (observables[i] == "M2")
+				add_wick(wick_M2{config, rng});
+			else if (observables[i] == "kekule")
+				add_wick(wick_kekule{config, rng});
+			else if (observables[i] == "epsilon")
+				add_wick(wick_kekule{config, rng});
+			else if (observables[i] == "sp")
+				add_wick(wick_kekule{config, rng});
+			else if (observables[i] == "tp")
+				add_wick(wick_kekule{config, rng});
+			
+			names.push_back("dyn_"+observables[i]);
+			config.measure.add_vectorobservable("dyn_"+observables[i]+"_mat",
+				config.param.n_matsubara, n_prebin);
+			config.measure.add_vectorobservable("dyn_"+observables[i]+"_tau",
+				2*config.param.n_discrete_tau + 1, n_prebin);
 		}
 		dyn_tau_avg.resize(config.param.n_discrete_tau + 1);
-		typedef std::initializer_list<std::string> list_t;
-		if (boost::algorithm::contains(observables, list_t{"M2"}))
-		{
-			add_wick(wick_M2{config, rng});
-			names.push_back("dyn_M2");
-			config.measure.add_vectorobservable("dyn_M2_mat",
-				config.param.n_matsubara, n_prebin);
-			config.measure.add_vectorobservable("dyn_M2_tau",
-				2*config.param.n_discrete_tau + 1, n_prebin);
-		}
-		if (boost::algorithm::contains(observables, list_t{"kekule"}))
-		{
-			add_wick(wick_kekule{config, rng});
-			names.push_back("dyn_kekule");
-			config.measure.add_vectorobservable("dyn_kekule_mat",
-				config.param.n_matsubara, n_prebin);
-			config.measure.add_vectorobservable("dyn_kekule_tau",
-				2*config.param.n_discrete_tau + 1, n_prebin);
-		}
-		if (boost::algorithm::contains(observables, list_t{"epsilon"}))
-		{
-			add_wick(wick_epsilon{config, rng});
-			names.push_back("dyn_epsilon");
-			config.measure.add_vectorobservable("dyn_epsilon_mat",
-				config.param.n_matsubara, n_prebin);
-			config.measure.add_vectorobservable("dyn_epsilon_tau",
-				2*config.param.n_discrete_tau + 1, n_prebin);
-		}
-		if (boost::algorithm::contains(observables, list_t{"sp"}))
-		{
-			add_wick(wick_sp{config, rng});
-			names.push_back("dyn_sp");
-			config.measure.add_vectorobservable("dyn_sp_mat",
-				config.param.n_matsubara, n_prebin);
-			config.measure.add_vectorobservable("dyn_sp_tau",
-				2*config.param.n_discrete_tau + 1, n_prebin);
-		}
-		if (boost::algorithm::contains(observables, list_t{"tp"}))
-		{
-			add_wick(wick_tp{config, rng});
-			names.push_back("dyn_tp");
-			config.measure.add_vectorobservable("dyn_tp_mat",
-				config.param.n_matsubara, n_prebin);
-			config.measure.add_vectorobservable("dyn_tp_tau",
-				2*config.param.n_discrete_tau + 1, n_prebin);
-		}
 	}
 	
 	template<typename T>

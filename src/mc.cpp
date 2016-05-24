@@ -1,5 +1,6 @@
 #include <string>
 #include <fstream>
+#include <boost/algorithm/string.hpp>
 #include "mc.h"
 #include "move_functors.h"
 #include "measure_functors.h"
@@ -23,6 +24,9 @@ mc::mc(const std::string& dir)
 	config.param.beta = 1./pars.value_or_default<double>("T", 0.2);
 	config.param.t = pars.value_or_default<double>("t", 1.0);
 	config.param.V = pars.value_or_default<double>("V", 1.355);
+	std::string obs_string = pars.value_or_default<std::string>("obs", "m2");
+	std::vector<std::string> obs;
+	boost::split(obs, obs_string, boost::is_any_of(","));
 	double v1_cutoff = pars.value_or_default<double>("v1_cutoff", 0.5);
 	if (config.param.V > v1_cutoff)
 	{
@@ -80,11 +84,8 @@ mc::mc(const std::string& dir)
 	qmc.add_event(event_rebuild{config, config.measure}, "rebuild");
 	qmc.add_event(event_build{config, rng}, "initial build");
 	qmc.add_event(event_max_order{config, rng}, "max_order");
-	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin,
-//		{"M2", "kekule", "sp", "tp", "epsilon"}}, "dyn_measure");
-		{"sp", "tp"}}, "dyn_measure");
-//		{"M2", "epsilon", "sp", "tp"}}, "dyn_measure");
-//		{"M2", "kekule", "epsilon", "sp", "tp"}}, "dyn_measure");
+	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin, obs},
+		"dyn_measure");
 	//Initialize vertex list to reduce warm up time
 	qmc.trigger_event("initial build");
 }

@@ -451,7 +451,8 @@ class fast_update
 		{
 			double ep = 0.;
 			for (auto& i : l.bonds("nearest neighbors"))
-				ep += -equal_time_gf(i.second, i.first) / l.n_bonds();
+				ep += l.parity(i.first) * l.parity(i.second)
+					* equal_time_gf(i.first, i.second) / l.n_bonds();
 			return ep;
 		}
 	
@@ -484,6 +485,8 @@ class fast_update
 			for (int i = 0; i < time_pos.size(); ++i)
 				time_pos[i] = std::lower_bound(random_times.begin(),
 					random_times.end(), time_grid[i]) - random_times.begin();
+
+			dmatrix_t et_gf_0 = equal_time_gf;
 			
 			// Time grid for Matsubara frequency measurement
 			if (omega_n_max > 0)
@@ -510,14 +513,14 @@ class fast_update
 						for (int i = 0; i < dyn_mat.size(); ++i)
 						{
 							// omega_n = 0 is a special case
-							dyn_mat[i][0] += obs[i].get_obs(equal_time_gf,
+							dyn_mat[i][0] += obs[i].get_obs(et_gf_0, equal_time_gf,
 								time_displaced_gf) * (random_times[t+1]
 								- random_times[t]);
 							for (int omega_n = 1; omega_n < omega_n_max; ++omega_n)
 							{
 								double omega = 2. * pi * omega_n / param.beta;
-								dyn_mat[i][omega_n] += obs[i].get_obs(equal_time_gf,
-									time_displaced_gf)
+								dyn_mat[i][omega_n] += obs[i].get_obs(et_gf_0,
+									equal_time_gf, time_displaced_gf)
 									* (std::sin(omega * random_times[t+1])
 									- std::sin(omega * random_times[t])) / omega;
 							}
@@ -532,7 +535,7 @@ class fast_update
 					while (pos_pt < time_pos.size() && tau_pt == time_pos[pos_pt])
 					{
 						for (int i = 0; i < dyn_tau.size(); ++i)
-							dyn_tau[i][pos_pt] = obs[i].get_obs(equal_time_gf,
+							dyn_tau[i][pos_pt] = obs[i].get_obs(et_gf_0, equal_time_gf,
 								time_displaced_gf);
 						++pos_pt;
 					}
@@ -614,7 +617,7 @@ class fast_update
 			// Imaginary time measurement
 			for (int t = 0; t < Nt; ++t)
 				for (int i = 0; i < dyn_tau.size(); ++i)
-					dyn_tau[i][t] = obs[i].get_obs(et_gf, td_gf[t]);
+					dyn_tau[i][t] = obs[i].get_obs(equal_time_gf, et_gf, td_gf[t]);
 		}
 		
 		const dmatrix_t& measure_time_displaced_gf()

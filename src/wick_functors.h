@@ -20,7 +20,8 @@ struct wick_M2
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& et_gf, const matrix_t& td_gf)
+	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
+		const matrix_t& td_gf)
 	{
 		double M2 = 0.;
 		for (int i = 0; i < config.l.n_sites(); ++i)
@@ -43,14 +44,16 @@ struct wick_kekule
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& et_gf, const matrix_t& td_gf)
+	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
+		const matrix_t& td_gf)
 	{
 		double kek = 0.;
 		for (auto& a : config.l.bonds("kekule"))
 			for (auto& b : config.l.bonds("kekule"))
 			{
-				kek += - td_gf(b.first, a.first) * td_gf(a.second, b.second)
-					* config.l.parity(b.first) * config.l.parity(a.first);
+				kek += et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
+					- config.l.parity(b.first) * config.l.parity(a.first)
+					* td_gf(a.first, b.first) * td_gf(a.second, b.second);
 			}
 		return kek;
 	}
@@ -66,14 +69,16 @@ struct wick_epsilon
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& et_gf, const matrix_t& td_gf)
+	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
+		const matrix_t& td_gf)
 	{
 		double ep = 0.;
-		for (auto& i : config.l.bonds("nearest neighbors"))
-			for (auto& n : config.l.bonds("nearest neighbors"))
+		for (auto& a : config.l.bonds("nearest neighbors"))
+			for (auto& b : config.l.bonds("nearest neighbors"))
 			{
-				ep += - config.l.parity(i.first) * config.l.parity(n.first)
-					* td_gf(n.first, i.first) * td_gf(i.second, n.second);
+				ep += et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second);
+					- config.l.parity(b.first) * config.l.parity(a.first)
+					* td_gf(a.first, b.first) * td_gf(a.second, b.second);
 			}
 		return ep / std::pow(config.l.n_bonds(), 2.);
 	}
@@ -89,7 +94,8 @@ struct wick_sp
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& et_gf, const matrix_t& td_gf)
+	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
+		const matrix_t& td_gf)
 	{
 		double sp = 0.;
 		auto& K = config.l.symmetry_point("K");
@@ -116,7 +122,8 @@ struct wick_tp
 		: config(config_), rng(rng_)
 	{}
 	
-	double get_obs(const matrix_t& et_gf, const matrix_t& td_gf)
+	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
+		const matrix_t& td_gf)
 	{
 		double tp = 0.;
 		double pi = 4.*std::atan(1.);
@@ -131,11 +138,9 @@ struct wick_tp
 						auto& r_m = config.l.real_space_coord(m);
 						auto& r_n = config.l.real_space_coord(n);
 						//tp += config.trig_spline.cos(K.dot(r_j - r_i + r_m - r_n))
-						tp += std::cos(-K.dot(r_i - r_j - r_m + r_n))
+						tp += std::cos(K.dot(r_i - r_j - r_m + r_n))
 							* (td_gf(i, m) * td_gf(j, n)
-							- td_gf(i, n) * td_gf(j, m))
-							* config.l.parity(i) * config.l.parity(j)
-							* config.l.parity(m) * config.l.parity(n);
+							- td_gf(i, n) * td_gf(j, m));
 					}
 		return tp;
 	}
