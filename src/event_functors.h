@@ -140,12 +140,10 @@ struct event_dynamic_measurement
 
 		for (int i = 0; i < dyn_mat.size(); ++i)
 		{
-			config.measure.add(names[i]+"_mat", dyn_mat[i]);
-			// Average imaginary time measurements from 0..beta/2 and beta/2..beta
-//			for (int j = 0; j < dyn_tau_avg.size(); ++j)
-//				dyn_tau_avg[j] = (dyn_tau[i][j] + dyn_tau[i][dyn_tau[i].size() - 1
-//					- j]) / 2.;
-			config.measure.add(names[i]+"_tau", dyn_tau[i]);
+			if (param.n_matsubara > 0)
+				config.measure.add(names[i]+"_mat", dyn_mat[i]);
+			if (param.n_discrete_tau > 0)
+				config.measure.add(names[i]+"_tau", dyn_tau[i]);
 		}
 	}
 };
