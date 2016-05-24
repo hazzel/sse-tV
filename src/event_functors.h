@@ -140,9 +140,9 @@ struct event_dynamic_measurement
 
 		for (int i = 0; i < dyn_mat.size(); ++i)
 		{
-			if (param.n_matsubara > 0)
+			if (config.param.n_matsubara > 0)
 				config.measure.add(names[i]+"_mat", dyn_mat[i]);
-			if (param.n_discrete_tau > 0)
+			if (config.param.n_discrete_tau > 0)
 				config.measure.add(names[i]+"_tau", dyn_tau[i]);
 		}
 	}
