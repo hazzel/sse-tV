@@ -52,7 +52,7 @@ struct wick_kekule
 			for (auto& b : config.l.bonds("kekule"))
 			{
 				kek += et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
-					- config.l.parity(b.first) * config.l.parity(a.first)
+					+ config.l.parity(b.first) * config.l.parity(a.first)
 					* td_gf(a.first, b.first) * td_gf(a.second, b.second);
 			}
 		return kek;
@@ -76,8 +76,8 @@ struct wick_epsilon
 		for (auto& a : config.l.bonds("nearest neighbors"))
 			for (auto& b : config.l.bonds("nearest neighbors"))
 			{
-				ep += et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second);
-					- config.l.parity(b.first) * config.l.parity(a.first)
+				ep += et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
+					+ config.l.parity(b.first) * config.l.parity(a.first)
 					* td_gf(a.first, b.first) * td_gf(a.second, b.second);
 			}
 		return ep / std::pow(config.l.n_bonds(), 2.);

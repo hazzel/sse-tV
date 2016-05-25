@@ -66,6 +66,7 @@ filelist = []
 #filelist.append(glob.glob("../bin/job/*.out"))
 filelist.append(glob.glob("../bin/job-2/*.out"))
 #filelist.append(glob.glob("../bin/job/bac/V0.5L2T0.05.out"))
+#filelist.append(glob.glob("../bin/job/bac/V1.355L2T0.05.out"))
 
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.04/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L6-V1.355-T0.04/*task*.out"))
@@ -129,10 +130,10 @@ for f in filelist:
 		y_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0])
 		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
 		if obs == "epsilon":
-			#y_tau = np.abs((y_tau[numpy.isfinite(y_tau)] - ArrangePlot(elist[i], "epsilon")[0][0]**2.))
-			#err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "epsilon")[0][0]*ArrangePlot(elist[i], "epsilon")[1][0])**2.)
-			y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
-			err_tau = err_tau[numpy.isfinite(err_tau)]
+			y_tau = np.abs((y_tau[numpy.isfinite(y_tau)] - ArrangePlot(elist[i], "epsilon")[0][0]**2.))
+			err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "epsilon")[0][0]*ArrangePlot(elist[i], "epsilon")[1][0])**2.)
+			#y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
+			#err_tau = err_tau[numpy.isfinite(err_tau)]
 		elif obs == "kekule":
 			y_tau = np.abs(-y_tau[numpy.isfinite(y_tau)])
 			err_tau = err_tau[numpy.isfinite(err_tau)]
@@ -193,8 +194,8 @@ for f in filelist:
 		for cap in caps:
 			cap.set_markeredgewidth(1.4)
 		if len(ed_glob) > 0 and len(ed_data) > ed_n:
-			#ax2.plot(ed_tau, ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=0.0, label=r'$L='+str(int(L))+'$')
-			ax2.plot(ed_tau, np.flipud(ed_data[ed_n]), marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
+			ax2.plot(ed_tau, ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=0.0, label=r'$L='+str(int(L))+'$')
+			#ax2.plot(ed_tau, np.flipud(ed_data[ed_n]), marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
 		'''
 		#nmin = len(x_tau)*0/32+5; nmax = len(x_tau)*15/32

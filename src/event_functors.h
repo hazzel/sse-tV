@@ -77,11 +77,11 @@ struct event_dynamic_measurement
 			else if (observables[i] == "kekule")
 				add_wick(wick_kekule{config, rng});
 			else if (observables[i] == "epsilon")
-				add_wick(wick_kekule{config, rng});
+				add_wick(wick_epsilon{config, rng});
 			else if (observables[i] == "sp")
-				add_wick(wick_kekule{config, rng});
+				add_wick(wick_sp{config, rng});
 			else if (observables[i] == "tp")
-				add_wick(wick_kekule{config, rng});
+				add_wick(wick_tp{config, rng});
 			
 			names.push_back("dyn_"+observables[i]);
 			config.measure.add_vectorobservable("dyn_"+observables[i]+"_mat",
