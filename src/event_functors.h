@@ -78,6 +78,8 @@ struct event_dynamic_measurement
 				add_wick(wick_kekule{config, rng});
 			else if (observables[i] == "epsilon")
 				add_wick(wick_epsilon{config, rng});
+			else if (observables[i] == "chern")
+				add_wick(wick_chern{config, rng});
 			else if (observables[i] == "sp")
 				add_wick(wick_sp{config, rng});
 			else if (observables[i] == "tp")

@@ -84,6 +84,38 @@ struct wick_epsilon
 	}
 };
 
+// chern(tau) = sum_{chern} <c_i^dag(tau) c_j(tau) c_n^dag c_m>
+struct wick_chern
+{
+	configuration& config;
+	Random& rng;
+
+	wick_chern(configuration& config_, Random& rng_)
+		: config(config_), rng(rng_)
+	{}
+	
+	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
+		const matrix_t& td_gf)
+	{
+		double ch = 0.;
+		for (auto& a : config.l.bonds("chern"))
+			for (auto& b : config.l.bonds("chern"))
+			{
+				ch += (et_gf_t(a.second, a.first) - et_gf_t(a.first, a.second))
+					* (et_gf_0(b.second, b.first) - et_gf_0(b.first, b.second))
+					+ config.l.parity(a.first) * config.l.parity(b.second)
+					* td_gf(a.first, b.second) * td_gf(a.second, b.first)
+					- config.l.parity(a.first) * config.l.parity(b.first)
+					* td_gf(a.first, b.first) * td_gf(a.second, b.second)
+					- config.l.parity(a.second) * config.l.parity(b.second)
+					* td_gf(a.second, b.second) * td_gf(a.first, b.first)
+					+ config.l.parity(a.second) * config.l.parity(b.first)
+					* td_gf(a.second, b.first) * td_gf(a.first, b.first);
+			}
+		return ch;
+	}
+};
+
 // sp(tau) = sum_ij e^{-i K (r_i - r_j)} <c_i(tau) c_j^dag>
 struct wick_sp
 {

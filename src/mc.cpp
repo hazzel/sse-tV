@@ -42,6 +42,7 @@ mc::mc(const std::string& dir)
 		/ (2.*config.param.t - config.param.V1));
 	config.param.n_delta = pars.value_or_default<int>("stabilization", 10);
 	int max_order = pars.value_or_default<int>("max_order", 5000);
+	std::cout << max_order << std::endl;
 
 	//Proposal probabilites
 	config.param.prop_V1 = pars.value_or_default<double>("prop_V1", 1.0);
@@ -65,6 +66,7 @@ mc::mc(const std::string& dir)
 	//Set up measurements
 	config.measure.add_observable("M2", n_prebin);
 	config.measure.add_observable("epsilon", n_prebin);
+	config.measure.add_observable("kekule", n_prebin);
 	config.measure.add_observable("<k>_1", n_prebin);
 	config.measure.add_observable("<k>_2", n_prebin);
 	config.measure.add_observable("energy", n_prebin);

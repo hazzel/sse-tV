@@ -64,14 +64,14 @@ marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 
 filelist = []
 #filelist.append(glob.glob("../bin/job/*.out"))
-#filelist.append(glob.glob("../bin/job-2/*.out"))
+filelist.append(glob.glob("../bin/job-2/*.out"))
 #filelist.append(glob.glob("../bin/job/bac/V0.5L2T0.05.out"))
 #filelist.append(glob.glob("../bin/job/bac/V1.355L2T0.05.out"))
 
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.04/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L6-V1.355-T0.04/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.355-T0.15/*task*.out"))
-filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.04-sp-tp/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.04-sp-tp/*task*.out"))
 
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.355-T0.05/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.0-T0.15/*task*.out"))
@@ -90,7 +90,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "sp"
+	obs = "chern"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -109,6 +109,9 @@ for f in filelist:
 		parity = 1.
 	elif obs == "tp":
 		ed_n = 13
+		parity = 1.
+	elif obs == "chern":
+		ed_n = 15
 		parity = 1.
 		
 	for i in range(len(plist)):
@@ -136,10 +139,10 @@ for f in filelist:
 			#y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
 			#err_tau = err_tau[numpy.isfinite(err_tau)]
 		elif obs == "kekule":
-			y_tau = np.abs(-y_tau[numpy.isfinite(y_tau)])
+			y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
 			err_tau = err_tau[numpy.isfinite(err_tau)]
 		else:
-			y_tau = (y_tau[numpy.isfinite(y_tau)])
+			y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
 			err_tau = err_tau[numpy.isfinite(err_tau)]
 		#Average over 0,beta/2 and beta/2,beta
 		#y_tau = (y_tau + np.flipud(y_tau))/2.
@@ -200,7 +203,7 @@ for f in filelist:
 		
 		
 		#nmin = len(x_tau)*0/32+5; nmax = len(x_tau)*15/32
-		nmin = len(x_tau)*0/32+2; nmax = len(x_tau)*8/32
+		nmin = len(x_tau)*0/32+1; nmax = len(x_tau)*12/32
 		#nmin = len(x_tau)*22/32; nmax = len(x_tau)*30/32-1
 		parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
 		px = np.linspace(x_tau[nmin], x_tau[nmax]-1, 1000)
