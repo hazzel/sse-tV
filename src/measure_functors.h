@@ -17,6 +17,7 @@ struct measure_estimator
 	{
 		config.measure.add("M2", config.M.measure_M2());
 		config.measure.add("epsilon", config.M.measure_epsilon());
+		config.measure.add("kekule", config.M.measure_kekule());
 		config.measure.add("<k>_1", config.M.non_ident(0));
 		config.measure.add("<k>_2", config.M.non_ident(1));
 		config.measure.add("energy", -(config.M.non_ident(0) - config.param.beta

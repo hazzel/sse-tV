@@ -452,8 +452,22 @@ class fast_update
 			double ep = 0.;
 			for (auto& i : l.bonds("nearest neighbors"))
 				ep += -l.parity(i.first) * l.parity(i.second)
-					* equal_time_gf(i.first, i.second) / l.n_bonds();
+					* equal_time_gf(i.first, i.second);
 			return ep;
+		}
+		
+		double measure_kekule()
+		{
+			return measure_kekule(equal_time_gf);
+		}
+		
+		double measure_kekule(const dmatrix_t& gf)
+		{
+			double kek = 0.;
+			for (auto& i : l.bonds("kekule"))
+				kek += -l.parity(i.first) * l.parity(i.second)
+					* equal_time_gf(i.first, i.second);
+			return kek;
 		}
 	
 		void measure_density_correlations(std::vector<double>& corr)

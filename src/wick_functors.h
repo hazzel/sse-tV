@@ -80,7 +80,7 @@ struct wick_epsilon
 					+ config.l.parity(b.first) * config.l.parity(a.first)
 					* td_gf(a.first, b.first) * td_gf(a.second, b.second);
 			}
-		return ep / std::pow(config.l.n_bonds(), 2.);
+		return ep;
 	}
 };
 
