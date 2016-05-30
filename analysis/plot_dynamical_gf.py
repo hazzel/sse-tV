@@ -70,6 +70,7 @@ filelist.append(glob.glob("../bin/job-2/*.out"))
 
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.04/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L6-V1.355-T0.04/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L6-V1.355-T0.04-sp-tp/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L2-V1.355-T0.15/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.04-sp-tp/*task*.out"))
 
@@ -97,20 +98,20 @@ for f in filelist:
 	if obs == "kekule":
 		ed_n = 3
 		parity = 1.
-	elif obs == "epsilon":
+	elif obs == "chern":
 		ed_n = 5
 		parity = 1.
-	elif obs == "epsilon_nn":
+	elif obs == "epsilon":
 		ed_n = 7
+		parity = 1.
+	elif obs == "epsilon_nn":
+		ed_n = 9
 		parity = 1.
 		obs = "epsilon"
 	elif obs == "sp":
-		ed_n = 11
-		parity = 1.
-	elif obs == "tp":
 		ed_n = 13
 		parity = 1.
-	elif obs == "chern":
+	elif obs == "tp":
 		ed_n = 15
 		parity = 1.
 		
@@ -134,11 +135,13 @@ for f in filelist:
 		y_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0])
 		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
 		if obs == "epsilon":
-			y_tau = np.abs((y_tau[numpy.isfinite(y_tau)] - ArrangePlot(elist[i], "epsilon")[0][0]**2.))
-			err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "epsilon")[0][0]*ArrangePlot(elist[i], "epsilon")[1][0])**2.)
-			#y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
-			#err_tau = err_tau[numpy.isfinite(err_tau)]
+			#y_tau = np.abs((y_tau[numpy.isfinite(y_tau)] - ArrangePlot(elist[i], "epsilon")[0][0]**2.))
+			#err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "epsilon")[0][0]*ArrangePlot(elist[i], "epsilon")[1][0])**2.)
+			y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
+			err_tau = err_tau[numpy.isfinite(err_tau)]
 		elif obs == "kekule":
+			#y_tau = np.abs((y_tau[numpy.isfinite(y_tau)] - ArrangePlot(elist[i], "kekule")[0][0]**2.))
+			#err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "kekule")[0][0]*ArrangePlot(elist[i], "kekule")[1][0])**2.)
 			y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
 			err_tau = err_tau[numpy.isfinite(err_tau)]
 		else:
@@ -201,7 +204,7 @@ for f in filelist:
 			ax2.plot(ed_tau, ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=0.0, label=r'$L='+str(int(L))+'$')
 			#ax2.plot(ed_tau, np.flipud(ed_data[ed_n]), marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
-		
+		'''
 		#nmin = len(x_tau)*0/32+5; nmax = len(x_tau)*15/32
 		nmin = len(x_tau)*0/32+1; nmax = len(x_tau)*12/32
 		#nmin = len(x_tau)*22/32; nmax = len(x_tau)*30/32-1
@@ -225,13 +228,13 @@ for f in filelist:
 				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[len(ed_data[ed_n])/4:len(ed_data[ed_n])/2], ed_data[ed_n][len(ed_data[ed_n])/4:len(ed_data[ed_n])/2], p0=[0.1, 0.1, 1.])
 				#parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionR, ed_tau[len(ed_data[ed_n])/2:len(ed_data[ed_n])-15], ed_data[ed_n][len(ed_data[ed_n])/2:len(ed_data[ed_n])-15], p0=[0.1, 0.1, 1.])
 			else:
-				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[2:len(ed_data[ed_n])*12/32], ed_data[ed_n][2:len(ed_data[ed_n])*12/32], p0=[0.1, 0.1, 1.])
+				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[3:len(ed_data[ed_n])*12/32], ed_data[ed_n][3:len(ed_data[ed_n])*12/32], p0=[0.1, 0.1, 1.])
 			px = np.linspace(ed_tau[0], ed_tau[len(ed_data[ed_n])/2], 1000)
 			#px = np.linspace(ed_tau[len(ed_data[ed_n])/2], ed_tau[len(ed_data[ed_n])-1], 1000)
 			ax2.plot(px, FitFunctionL(px, *parameter_ed), 'r-', linewidth=3.0)
 			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[2])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
 			print parameter_ed
-		
+		'''
 		'''
 		ax3.set_xlabel(r"$n$")
 		ax3.set_ylabel(r"$\Delta_n$")

@@ -112,7 +112,7 @@ struct wick_chern
 					+ config.l.parity(a.second) * config.l.parity(b.first)
 					* td_gf(a.second, b.first) * td_gf(a.first, b.first);
 			}
-		return ch;
+		return -ch;
 	}
 };
 

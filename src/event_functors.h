@@ -86,10 +86,12 @@ struct event_dynamic_measurement
 				add_wick(wick_tp{config, rng});
 			
 			names.push_back("dyn_"+observables[i]);
-			config.measure.add_vectorobservable("dyn_"+observables[i]+"_mat",
-				config.param.n_matsubara, n_prebin);
-			config.measure.add_vectorobservable("dyn_"+observables[i]+"_tau",
-				2*config.param.n_discrete_tau + 1, n_prebin);
+			if (config.param.n_matsubara > 0)
+				config.measure.add_vectorobservable("dyn_"+observables[i]+"_mat",
+					config.param.n_matsubara, n_prebin);
+			if (config.param.n_discrete_tau > 0)
+				config.measure.add_vectorobservable("dyn_"+observables[i]+"_tau",
+					2*config.param.n_discrete_tau + 1, n_prebin);
 		}
 		dyn_tau_avg.resize(config.param.n_discrete_tau + 1);
 	}

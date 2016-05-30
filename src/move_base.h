@@ -45,15 +45,12 @@ class move_base
 			attempt_fun = [functor]() { return functor->attempt(); };
 			accept_fun = [functor]() { return functor->accept(); };
 			reject_fun = [functor]() { functor->reject(); };
-			clone_fun = [functor, this]() { return move_base(*functor, name_str,
-				prop_rate); };
 		}
 	private:
 		std::shared_ptr<void> impl;
 		std::function<double()> attempt_fun;
 		std::function<double()> accept_fun;
 		std::function<void()> reject_fun;
-		std::function<move_base()> clone_fun;
 		std::string name_str;
 		double prop_rate;
 		double avg_sign;
