@@ -379,8 +379,18 @@ class fast_update
 			{
 				// Wrap time displaced gf forwards
 				if (bond_list[current_vertex] > 0)
-					time_displaced_gf = vertex_matrix(current_vertex + 1)
-						* time_displaced_gf;
+				{
+//					time_displaced_gf = vertex_matrix(current_vertex + 1)
+//						* time_displaced_gf;
+					auto& b = lattice_bonds[bond_list[current_vertex] - 1];
+					int b_ind[] = {b.first, b.second};
+					int type = bond_list[current_vertex] > l.n_bonds();
+					for (int i = 0; i < 2; ++i)
+						for (int j = 0; j < 2; ++j)
+							time_displaced_gf(b_ind[i], b_ind[j]) = A[2*type](i, 1)
+								* time_displaced_gf(1, b_ind[j]) + A[2*type](i, 2)
+								* time_displaced_gf(2, b_ind[j]);
+				}
 			}
 			// Wrap equal time gf forwards
 			if (bond_list[current_vertex] > 0)
