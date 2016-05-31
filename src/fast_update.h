@@ -360,12 +360,15 @@ class fast_update
 			dmatrix_t GP(l.n_sites(), 2);
 			GP.col(0) = equal_time_gf.col(bond.second) * denom(0, 1);
 			GP.col(1) = equal_time_gf.col(bond.first) * denom(1, 0);
+//			GP.col(0) = equal_time_gf.col(bond.first);
+//			GP.col(1) = equal_time_gf.col(bond.second);
 			dmatrix_t PIG(2, l.n_sites());
 			PIG.row(0) = -equal_time_gf.row(bond.first);
 			PIG(0, bond.first) += 1.;
 			PIG.row(1) = -equal_time_gf.row(bond.second);
 			PIG(1, bond.second) += 1.;
 			equal_time_gf.noalias() -= GP * PIG;
+//			equal_time_gf.noalias() -= GP * denom * PIG;
 		}
 
 		void multiply_vertex_from_left(dmatrix_t& gf, int vertex_id, int inv)
