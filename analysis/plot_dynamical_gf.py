@@ -91,7 +91,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "chern"
+	obs = "epsilon"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.

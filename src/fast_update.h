@@ -99,7 +99,7 @@ class fast_update
 				C[2*i+1] = C[2*i].inverse();
 			}
 
-			build_vertex_matrices();
+//			build_vertex_matrices();
 			max_order(max_order_);
 		}
 
@@ -221,18 +221,6 @@ class fast_update
 			return lam;
 		}
 		
-		sparse_t create_sparse_from_block(const std::pair<int, int>& bond,
-			const dmatrix_t& m)
-		{
-			using triplet_t = Eigen::Triplet<double>;
-			std::vector<triplet_t> triplet_list = {{bond.first, bond.first,
-				m(0, 0)}, {bond.first, bond.second, m(0, 1)}, {bond.second,
-				bond.first, m(1, 0)}, {bond.second, bond.second, m(1, 1)}};
-			sparse_t s(l.n_sites(), l.n_sites());
-			s.setFromTriplets(triplet_list.begin(), triplet_list.end());
-			return s;
-		}
-
 		const sparse_t& vertex_matrix(int vertex_id)
 		{
 			if (bond_list[vertex_id-1] == 0)
@@ -276,7 +264,8 @@ class fast_update
 			for (int i = n; i > m; --i)
 			{
 				if (bond_list[i-1] == 0) continue;
-				P *= vertex_matrix(i);
+//				P *= vertex_matrix(i);
+				multiply_vertex_from_right(P, i, 0);
 			}
 			return P;
 		}
@@ -341,14 +330,18 @@ class fast_update
 		void finish_update_vertex(int bond_type)
 		{
 			std::pair<int, int> bond;
-			matrix_t<2, 2> denom;
+			matrix_t<2, 2> denom = dmatrix_t::Zero(2, 2);
 			// Insert bond at vertex
 			if (get_current_bond() == 0)
 			{
 				bond = lattice_bonds[bond_buffer - 1];
 				bond_list[current_vertex-1] = bond_buffer;
-				denom = (B[2*bond_type+1] + (id_2 - vertex_block(equal_time_gf,
-					bond))).inverse();
+//				denom = (B[2*bond_type+1] + (id_2 - vertex_block(equal_time_gf,
+//					bond))).inverse();
+				denom(0, 1) = 1./(B[2*bond_type+1](1, 0)
+					- equal_time_gf(bond.second, bond.first));
+				denom(1, 0) = 1./(B[2*bond_type+1](0, 1)
+					- equal_time_gf(bond.first, bond.second));
 				++n_non_ident[bond_type];
 			}
 			// Remove bond at vertex
@@ -356,21 +349,49 @@ class fast_update
 			{
 				bond = lattice_bonds[bond_list[current_vertex-1] - 1];
 				bond_list[current_vertex-1] = 0;
-				denom = (C[2*bond_type+1] + (id_2 - vertex_block(equal_time_gf,
-					bond))).inverse();
+//				denom = (C[2*bond_type+1] + (id_2 - vertex_block(equal_time_gf,
+//					bond))).inverse();
+				denom(0, 1) = 1./(C[2*bond_type+1](1, 0)
+					- equal_time_gf(bond.second, bond.first));
+				denom(1, 0) = 1./(C[2*bond_type+1](0, 1)
+					- equal_time_gf(bond.first, bond.second));
 				--n_non_ident[bond_type];
 			}
 			dmatrix_t GP(l.n_sites(), 2);
-			GP.col(0) = equal_time_gf.col(bond.first);
-			GP.col(1) = equal_time_gf.col(bond.second);
+			GP.col(0) = equal_time_gf.col(bond.second) * denom(0, 1);
+			GP.col(1) = equal_time_gf.col(bond.first) * denom(1, 0);
 			dmatrix_t PIG(2, l.n_sites());
 			PIG.row(0) = -equal_time_gf.row(bond.first);
 			PIG(0, bond.first) += 1.;
 			PIG.row(1) = -equal_time_gf.row(bond.second);
 			PIG(1, bond.second) += 1.;
-			equal_time_gf.noalias() -= GP * denom * PIG;
+			equal_time_gf.noalias() -= GP * PIG;
 		}
 
+		void multiply_vertex_from_left(dmatrix_t& gf, int vertex_id, int inv)
+		{
+			auto& b = lattice_bonds[bond_list[vertex_id - 1] - 1];
+			int type = 2 * static_cast<int>(bond_list[vertex_id - 1] > l.n_bonds())
+				+ inv;
+			dmatrix_t row_0 = gf.row(b.first);
+			gf.row(b.first) *= A[type](0, 0);
+			gf.row(b.first).noalias() += A[type](0, 1) * gf.row(b.second);
+			gf.row(b.second) *= A[type](1, 1);
+			gf.row(b.second).noalias() += A[type](1, 0) * row_0;
+		}
+		
+		void multiply_vertex_from_right(dmatrix_t& gf, int vertex_id, int inv)
+		{
+			auto& b = lattice_bonds[bond_list[vertex_id - 1] - 1];
+			int type = 2 * static_cast<int>(bond_list[vertex_id - 1] > l.n_bonds())
+				+ inv;
+			dmatrix_t col_0 = gf.col(b.first);
+			gf.col(b.first) *= A[type](0, 0);
+			gf.col(b.first).noalias() += A[type](1, 0) * gf.col(b.second);
+			gf.col(b.second) *= A[type](1, 1);
+			gf.col(b.second).noalias() += A[type](0, 1) * col_0;
+		}
+		
 		void advance_forward()
 		{
 			if (current_vertex == n_max_order)
@@ -379,23 +400,19 @@ class fast_update
 			{
 				// Wrap time displaced gf forwards
 				if (bond_list[current_vertex] > 0)
-				{
 //					time_displaced_gf = vertex_matrix(current_vertex + 1)
 //						* time_displaced_gf;
-					auto& b = lattice_bonds[bond_list[current_vertex] - 1];
-					int b_ind[] = {b.first, b.second};
-					int type = bond_list[current_vertex] > l.n_bonds();
-					for (int i = 0; i < 2; ++i)
-						for (int j = 0; j < 2; ++j)
-							time_displaced_gf(b_ind[i], b_ind[j]) = A[2*type](i, 1)
-								* time_displaced_gf(1, b_ind[j]) + A[2*type](i, 2)
-								* time_displaced_gf(2, b_ind[j]);
-				}
+					multiply_vertex_from_left(time_displaced_gf, current_vertex + 1,
+						0);
 			}
 			// Wrap equal time gf forwards
 			if (bond_list[current_vertex] > 0)
-				equal_time_gf = vertex_matrix(current_vertex + 1)
-					* equal_time_gf * inv_vertex_matrix(current_vertex + 1);
+			{
+//				equal_time_gf = vertex_matrix(current_vertex + 1)
+//					* equal_time_gf * inv_vertex_matrix(current_vertex + 1);
+				multiply_vertex_from_left(equal_time_gf, current_vertex + 1, 0);
+				multiply_vertex_from_right(equal_time_gf, current_vertex + 1, 1);
+			}
 			++current_vertex;
 		}
 		
@@ -407,13 +424,18 @@ class fast_update
 			{
 				// Wrap time displaced gf forwards
 				if (bond_list[current_vertex - 1] > 0)
-					time_displaced_gf = time_displaced_gf
-						* vertex_matrix(current_vertex);
+//					time_displaced_gf = time_displaced_gf
+//						* vertex_matrix(current_vertex);
+					multiply_vertex_from_right(time_displaced_gf, current_vertex, 0);
 			}
 			// Wrap equal time gf backwards
 			if (bond_list[current_vertex - 1] > 0)
-				equal_time_gf = inv_vertex_matrix(current_vertex)
-					* equal_time_gf * vertex_matrix(current_vertex);
+			{
+//				equal_time_gf = inv_vertex_matrix(current_vertex)
+//					* equal_time_gf * vertex_matrix(current_vertex);
+				multiply_vertex_from_left(equal_time_gf, current_vertex, 1);
+				multiply_vertex_from_right(equal_time_gf, current_vertex, 0);
+			}
 			--current_vertex;
 		}
 		
