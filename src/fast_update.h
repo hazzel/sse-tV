@@ -293,16 +293,17 @@ class fast_update
 			{
 				bond_buffer = (rng() + bond_type) * l.n_bonds() + 1;
 				auto& bond = lattice_bonds[bond_buffer - 1];
-				matrix_t<2, 2> d = id_2 + B[2*bond_type] * (id_2 - vertex_block(
-					equal_time_gf, bond));
+				matrix_t<2, 2> d = A[2*bond_type] - B[2*bond_type] * vertex_block(
+					equal_time_gf, bond);
+				double det = d(0, 0) * d(1, 1) - d(0, 1) * d(1, 0);
 				// Insert V1 vertex
 				if (bond_type == 0)
-					return d.determinant() * l.n_bonds() * param.beta * param.t
+					return det * l.n_bonds() * param.beta * param.t
 						/ ((n_max_order - n_non_ident[0] - n_non_ident[1])
 						* std::sinh(param.lambda));
 				// Insert V2 vertex
 				else
-					return -d.determinant() * l.n_bonds() * param.beta * param.V2/4.
+					return -det * l.n_bonds() * param.beta * param.V2/4.
 						/ ((n_max_order - n_non_ident[0] - n_non_ident[1]));
 			}
 			// Remove bond at vertex
@@ -310,18 +311,18 @@ class fast_update
 				(bond_type == 1 && get_current_bond() > l.n_bonds()))
 			{
 				bond_buffer = 0;
-				matrix_t<2, 2> d = id_2 + C[2*bond_type] * (id_2 - vertex_block(
-					equal_time_gf, current_vertex));
+				matrix_t<2, 2> d = A[2*bond_type+1] - C[2*bond_type] * vertex_block(
+					equal_time_gf, current_vertex);
+				double det = d(0, 0) * d(1, 1) - d(0, 1) * d(1, 0);
 				// Insert V1 vertex
 				if (bond_type == 0)
-					return d.determinant() * ((n_max_order - n_non_ident[0]
-						- n_non_ident[1] + 1.) * std::sinh(param.lambda))
-						/ (l.n_bonds() * param.beta * param.t);
+					return det * ((n_max_order - n_non_ident[0] - n_non_ident[1]
+						+ 1.) * std::sinh(param.lambda)) / (l.n_bonds() * param.beta
+						* param.t);
 				// Insert V2 vertex
 				else
-					return -d.determinant() * ((n_max_order - n_non_ident[0]
-						- n_non_ident[1] + 1.)) / (l.n_bonds() * param.beta
-						* param.V2 / 4.);
+					return -det * ((n_max_order - n_non_ident[0] - n_non_ident[1]
+						+ 1.)) / (l.n_bonds() * param.beta * param.V2 / 4.);
 			}
 			else
 				return 0.;
@@ -336,8 +337,6 @@ class fast_update
 			{
 				bond = lattice_bonds[bond_buffer - 1];
 				bond_list[current_vertex-1] = bond_buffer;
-//				denom = (B[2*bond_type+1] + (id_2 - vertex_block(equal_time_gf,
-//					bond))).inverse();
 				denom(0, 1) = 1./(B[2*bond_type+1](1, 0)
 					- equal_time_gf(bond.second, bond.first));
 				denom(1, 0) = 1./(B[2*bond_type+1](0, 1)
@@ -349,8 +348,6 @@ class fast_update
 			{
 				bond = lattice_bonds[bond_list[current_vertex-1] - 1];
 				bond_list[current_vertex-1] = 0;
-//				denom = (C[2*bond_type+1] + (id_2 - vertex_block(equal_time_gf,
-//					bond))).inverse();
 				denom(0, 1) = 1./(C[2*bond_type+1](1, 0)
 					- equal_time_gf(bond.second, bond.first));
 				denom(1, 0) = 1./(C[2*bond_type+1](0, 1)
@@ -360,15 +357,12 @@ class fast_update
 			dmatrix_t GP(l.n_sites(), 2);
 			GP.col(0) = equal_time_gf.col(bond.second) * denom(0, 1);
 			GP.col(1) = equal_time_gf.col(bond.first) * denom(1, 0);
-//			GP.col(0) = equal_time_gf.col(bond.first);
-//			GP.col(1) = equal_time_gf.col(bond.second);
 			dmatrix_t PIG(2, l.n_sites());
 			PIG.row(0) = -equal_time_gf.row(bond.first);
 			PIG(0, bond.first) += 1.;
 			PIG.row(1) = -equal_time_gf.row(bond.second);
 			PIG(1, bond.second) += 1.;
 			equal_time_gf.noalias() -= GP * PIG;
-//			equal_time_gf.noalias() -= GP * denom * PIG;
 		}
 
 		void multiply_vertex_from_left(dmatrix_t& gf, int vertex_id, int inv)
