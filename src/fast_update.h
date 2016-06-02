@@ -293,8 +293,8 @@ class fast_update
 			{
 				bond_buffer = (rng() + bond_type) * l.n_bonds() + 1;
 				auto& bond = lattice_bonds[bond_buffer - 1];
-				matrix_t<2, 2> d = A[2*bond_type] - B[2*bond_type] * vertex_block(
-					equal_time_gf, bond);
+				matrix_t<2, 2> d = A[2*bond_type];
+				d.noalias() -= B[2*bond_type] * vertex_block(equal_time_gf, bond);
 				double det = d(0, 0) * d(1, 1) - d(0, 1) * d(1, 0);
 				// Insert V1 vertex
 				if (bond_type == 0)
@@ -311,8 +311,9 @@ class fast_update
 				(bond_type == 1 && get_current_bond() > l.n_bonds()))
 			{
 				bond_buffer = 0;
-				matrix_t<2, 2> d = A[2*bond_type+1] - C[2*bond_type] * vertex_block(
-					equal_time_gf, current_vertex);
+				matrix_t<2, 2> d = A[2*bond_type+1];
+				d.noalias() -= C[2*bond_type] * vertex_block(equal_time_gf,
+					current_vertex);
 				double det = d(0, 0) * d(1, 1) - d(0, 1) * d(1, 0);
 				// Insert V1 vertex
 				if (bond_type == 0)
@@ -355,8 +356,8 @@ class fast_update
 				--n_non_ident[bond_type];
 			}
 			dmatrix_t GP(l.n_sites(), 2);
-			GP.col(0) = equal_time_gf.col(bond.second) * denom(0, 1);
-			GP.col(1) = equal_time_gf.col(bond.first) * denom(1, 0);
+			GP.col(0) = equal_time_gf.col(bond.second) * denom(1, 0);
+			GP.col(1) = equal_time_gf.col(bond.first) * denom(0, 1);
 			dmatrix_t PIG(2, l.n_sites());
 			PIG.row(0) = -equal_time_gf.row(bond.first);
 			PIG(0, bond.first) += 1.;
