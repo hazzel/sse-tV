@@ -342,10 +342,6 @@ class fast_update
 					- equal_time_gf(bond.second, bond.first));
 				denom(1, 0) = 1./(B[2*bond_type+1](0, 1)
 					- equal_time_gf(bond.first, bond.second));
-				
-//				denom = (B[2*bond_type+1] + id_2 - vertex_block(equal_time_gf,
-//					bond)).inverse();
-				
 				++n_non_ident[bond_type];
 			}
 			// Remove bond at vertex
@@ -357,19 +353,11 @@ class fast_update
 					- equal_time_gf(bond.second, bond.first));
 				denom(1, 0) = 1./(C[2*bond_type+1](0, 1)
 					- equal_time_gf(bond.first, bond.second));
-				
-//				denom = (C[2*bond_type+1] + id_2 - vertex_block(equal_time_gf,
-//					bond)).inverse();
-
 				--n_non_ident[bond_type];
 			}
 			dmatrix_t GP(l.n_sites(), 2);
 			GP.col(0) = equal_time_gf.col(bond.second) * denom(1, 0);
 			GP.col(1) = equal_time_gf.col(bond.first) * denom(0, 1);			
-//			GP.col(0) = equal_time_gf.col(bond.first) * denom(0, 0)
-//				+ equal_time_gf.col(bond.second) * denom(1, 0);
-//			GP.col(1) = equal_time_gf.col(bond.first) * denom(0, 1)
-//				+ equal_time_gf.col(bond.second) * denom(1, 1);
 			dmatrix_t PIG(2, l.n_sites());
 			PIG.row(0) = -equal_time_gf.row(bond.first);
 			PIG(0, bond.first) += 1.;
@@ -410,16 +398,12 @@ class fast_update
 			{
 				// Wrap time displaced gf forwards
 				if (bond_list[current_vertex] > 0)
-//					time_displaced_gf = vertex_matrix(current_vertex + 1)
-//						* time_displaced_gf;
 					multiply_vertex_from_left(time_displaced_gf, current_vertex + 1,
 						0);
 			}
 			// Wrap equal time gf forwards
 			if (bond_list[current_vertex] > 0)
 			{
-//				equal_time_gf = vertex_matrix(current_vertex + 1)
-//					* equal_time_gf * inv_vertex_matrix(current_vertex + 1);
 				multiply_vertex_from_left(equal_time_gf, current_vertex + 1, 0);
 				multiply_vertex_from_right(equal_time_gf, current_vertex + 1, 1);
 			}
@@ -434,15 +418,11 @@ class fast_update
 			{
 				// Wrap time displaced gf forwards
 				if (bond_list[current_vertex - 1] > 0)
-//					time_displaced_gf = time_displaced_gf
-//						* vertex_matrix(current_vertex);
 					multiply_vertex_from_right(time_displaced_gf, current_vertex, 0);
 			}
 			// Wrap equal time gf backwards
 			if (bond_list[current_vertex - 1] > 0)
 			{
-//				equal_time_gf = inv_vertex_matrix(current_vertex)
-//					* equal_time_gf * vertex_matrix(current_vertex);
 				multiply_vertex_from_left(equal_time_gf, current_vertex, 1);
 				multiply_vertex_from_right(equal_time_gf, current_vertex, 0);
 			}
