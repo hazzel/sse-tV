@@ -342,6 +342,10 @@ class fast_update
 					- equal_time_gf(bond.second, bond.first));
 				denom(1, 0) = 1./(B[2*bond_type+1](0, 1)
 					- equal_time_gf(bond.first, bond.second));
+				
+//				denom = (B[2*bond_type+1] + id_2 - vertex_block(equal_time_gf,
+//					bond)).inverse();
+				
 				++n_non_ident[bond_type];
 			}
 			// Remove bond at vertex
@@ -353,11 +357,19 @@ class fast_update
 					- equal_time_gf(bond.second, bond.first));
 				denom(1, 0) = 1./(C[2*bond_type+1](0, 1)
 					- equal_time_gf(bond.first, bond.second));
+				
+//				denom = (C[2*bond_type+1] + id_2 - vertex_block(equal_time_gf,
+//					bond)).inverse();
+
 				--n_non_ident[bond_type];
 			}
 			dmatrix_t GP(l.n_sites(), 2);
 			GP.col(0) = equal_time_gf.col(bond.second) * denom(1, 0);
-			GP.col(1) = equal_time_gf.col(bond.first) * denom(0, 1);
+			GP.col(1) = equal_time_gf.col(bond.first) * denom(0, 1);			
+//			GP.col(0) = equal_time_gf.col(bond.first) * denom(0, 0)
+//				+ equal_time_gf.col(bond.second) * denom(1, 0);
+//			GP.col(1) = equal_time_gf.col(bond.first) * denom(0, 1)
+//				+ equal_time_gf.col(bond.second) * denom(1, 1);
 			dmatrix_t PIG(2, l.n_sites());
 			PIG.row(0) = -equal_time_gf.row(bond.first);
 			PIG(0, bond.first) += 1.;
