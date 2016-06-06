@@ -67,6 +67,7 @@ filelist = []
 filelist.append(glob.glob("../bin/job-2/*.out"))
 #filelist.append(glob.glob("../bin/job/bac/V0.5L2T0.05.out"))
 #filelist.append(glob.glob("../bin/job/bac/V1.355L2T0.05.out"))
+#filelist.append(glob.glob("../bin/job-2/bac/L2V1.355T0.25.out"))
 
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.04/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L6-V1.355-T0.04/*task*.out"))
@@ -91,7 +92,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "M2"
+	obs = "epsilon"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -148,8 +149,8 @@ for f in filelist:
 			y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
 			err_tau = err_tau[numpy.isfinite(err_tau)]
 		#Average over 0,beta/2 and beta/2,beta
-		#y_tau = (y_tau + np.flipud(y_tau))/2.
-		#err_tau = np.sqrt(np.square(err_tau) + np.square(np.flipud(err_tau)))/2.
+		y_tau = (y_tau + np.flipud(y_tau))/2.
+		err_tau = np.sqrt(np.square(err_tau) + np.square(np.flipud(err_tau)))/2.
 		
 		if n_matsubara > 0:
 			x_mat = (np.array(range(0, n_matsubara)) * (2. + (1.-parity)/2.)) * np.pi * T
@@ -204,12 +205,12 @@ for f in filelist:
 			ax2.plot(ed_tau, ed_data[ed_n], marker='o', color="r", markersize=10.0, linewidth=0.0, label=r'$L='+str(int(L))+'$')
 			#ax2.plot(ed_tau, np.flipud(ed_data[ed_n]), marker='o', color="r", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		
-		'''
+		
 		#nmin = len(x_tau)*0/32+5; nmax = len(x_tau)*15/32
-		nmin = len(x_tau)*0/32+1; nmax = len(x_tau)*12/32
+		nmin = len(x_tau)*0/32+1; nmax = len(x_tau)*15/32
 		#nmin = len(x_tau)*22/32; nmax = len(x_tau)*30/32-1
 		parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
-		px = np.linspace(x_tau[nmin], x_tau[nmax]-1, 1000)
+		px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
 		ax2.plot(px, FitFunctionL(px, *parameter), 'k-', linewidth=3.0)
 		d = -int(np.log10(abs(perr[2])))+2
 		ax2.text(0.10, 0.98, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(abs(parameter[2])) + "(" + str(round(perr[2], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
@@ -223,7 +224,7 @@ for f in filelist:
 			#ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[3])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
 			
 			if obs == "epsilon":
-				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[3:len(ed_data[ed_n])/2], ed_data[ed_n][3:len(ed_data[ed_n])/2], p0=[0.1, 0.1, 1.])
+				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[3:len(ed_data[ed_n])*12/32], ed_data[ed_n][3:len(ed_data[ed_n])*12/32], p0=[28., 2.5, 4.])
 			elif obs == "sp":
 				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[len(ed_data[ed_n])/4:len(ed_data[ed_n])/2], ed_data[ed_n][len(ed_data[ed_n])/4:len(ed_data[ed_n])/2], p0=[0.1, 0.1, 1.])
 				#parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionR, ed_tau[len(ed_data[ed_n])/2:len(ed_data[ed_n])-15], ed_data[ed_n][len(ed_data[ed_n])/2:len(ed_data[ed_n])-15], p0=[0.1, 0.1, 1.])
@@ -234,7 +235,8 @@ for f in filelist:
 			ax2.plot(px, FitFunctionL(px, *parameter_ed), 'r-', linewidth=3.0)
 			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[2])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
 			print parameter_ed
-		'''
+		
+		
 		'''
 		ax3.set_xlabel(r"$n$")
 		ax3.set_ylabel(r"$\Delta_n$")

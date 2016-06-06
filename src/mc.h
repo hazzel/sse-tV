@@ -55,6 +55,7 @@ class mc
 		void do_update();
 		void do_measurement();
 		void status();
+		void vertex_update();
 	private:
 		Random rng;
 		mctools qmc;

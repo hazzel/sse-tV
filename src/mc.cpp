@@ -58,9 +58,9 @@ mc::mc(const std::string& dir)
 		config.param.prop_V2);
 	
 	//Measure acceptance probabilities
-	config.measure.add_observable("update type 0", n_prebin * n_static_cycles);
-	config.measure.add_observable("update type 1", n_prebin * n_static_cycles);
-	config.measure.add_observable("sign", n_prebin * n_static_cycles);
+//	config.measure.add_observable("update type 0", n_prebin * n_static_cycles);
+//	config.measure.add_observable("update type 1", n_prebin * n_static_cycles);
+//	config.measure.add_observable("sign", n_prebin * n_static_cycles);
 
 	//Set up measurements
 	config.measure.add_observable("M2", n_prebin);
@@ -179,6 +179,18 @@ bool mc::is_thermalized()
 {
 	return sweep >= n_warmup;
 }
+		
+void mc::vertex_update()
+{
+	int bond_type;
+	if (rng() < qmc.get_proposal_rates()[0])
+		bond_type = 0;
+	else
+		bond_type = 1;
+	double p = config.M.try_update_vertex(bond_type);
+	if (rng() < std::abs(p))
+		config.M.finish_update_vertex(bond_type);
+}
 
 void mc::do_update()
 {
@@ -186,7 +198,8 @@ void mc::do_update()
 	{
 		for (int n = 0; n < config.M.max_order(); ++n)
 		{
-			qmc.do_update(config.measure);
+//			qmc.do_update(config.measure);
+			vertex_update();
 			if (is_thermalized())
 			{
 				++measure_static_cnt;
@@ -212,7 +225,8 @@ void mc::do_update()
 		for (int n = 0; n < config.M.max_order(); ++n)
 		{
 			config.M.advance_forward();
-			qmc.do_update(config.measure);
+//			qmc.do_update(config.measure);
+			vertex_update();
 			config.M.stabilize_forward();
 			if (is_thermalized())
 			{
