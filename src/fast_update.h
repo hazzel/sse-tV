@@ -9,7 +9,6 @@
 #include "lattice.h"
 #include "parameters.h"
 #include "Random.h"
-#include "spline.h"
 #include "wick_base.h"
 
 template<typename stabilizer_t>
@@ -22,9 +21,9 @@ class fast_update
 		using sparse_t = Eigen::SparseMatrix<double>;
 
 		fast_update(Random& rng_, const lattice& l_, const parameters& param_,
-			measurements& measure_, spline& trig_spline_)
+			measurements& measure_)
 			: rng(rng_), l(l_), param(param_), measure(measure_),
-				trig_spline(trig_spline_), n_max_order(0), n_non_ident{0, 0},
+				n_max_order(0), n_non_ident{0, 0},
 				update_time_displaced_gf(false),
 				equal_time_gf{}, time_displaced_gf{},
 				stabilizer{measure, equal_time_gf, time_displaced_gf}
@@ -671,7 +670,6 @@ class fast_update
 		const lattice& l;
 		const parameters& param;
 		measurements& measure;
-		const spline& trig_spline;
 		std::vector<std::pair<int, int>> lattice_bonds;
 		std::vector<int> bond_list;
 		int current_vertex;

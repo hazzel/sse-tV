@@ -18,8 +18,6 @@ include_directories($ENV{HOME}/libs/alglib/src)
 include_directories($ENV{HOME}/alglib/src)
 include_directories(${MCLL})
 
-file(GLOB ALGLIB_SRC $ENV{HOME}/libs/alglib/src/*.cpp $ENV{HOME}/alglib/src/*.cpp)
-
 if(mode STREQUAL "mpi")
 	# Set up MPI
 	MESSAGE("Using MPI implementation.")
