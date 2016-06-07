@@ -9,7 +9,6 @@
 #include "lattice.h"
 #include "parameters.h"
 #include "Random.h"
-#include "spline.h"
 
 // The Monte Carlo configuration
 struct configuration
@@ -17,13 +16,12 @@ struct configuration
 	lattice l;
 	parameters param;
 	measurements& measure;
-	spline trig_spline;
 	fast_update<qr_stabilizer> M;
 	std::vector<int> shellsize;
 
 	configuration(Random& rng, measurements& measure_)
-		: l(), param(), measure(measure_), trig_spline(1000),
-			M{rng, l, param, measure, trig_spline}
+		: l(), param(), measure(measure_),
+			M{rng, l, param, measure}
 	{}
 
 	void initialize(int max_order)
