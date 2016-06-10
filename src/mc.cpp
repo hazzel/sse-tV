@@ -13,6 +13,7 @@ mc::mc(const std::string& dir)
 	pars.read_file(dir);
 	sweep = 0;
 	measure_cnt = 0;
+	int n_sweeps = pars.value_or_default<int>("SWEEPS", 10000);
 	n_static_cycles = pars.value_or_default<int>("static_cycles", 300);
 	n_dyn_cycles = pars.value_or_default<int>("dyn_cycles", 300);
 	n_warmup = pars.value_or_default<int>("warmup", 100000);
@@ -69,9 +70,9 @@ mc::mc(const std::string& dir)
 	config.measure.add_observable("<k>_1", n_prebin);
 	config.measure.add_observable("<k>_2", n_prebin);
 	config.measure.add_observable("energy", n_prebin);
-	config.measure.add_observable("norm error", n_prebin);
-	config.measure.add_observable("max error", n_prebin);
-	config.measure.add_observable("avg error", n_prebin);
+	config.measure.add_observable("norm error", n_sweeps);
+	config.measure.add_observable("max error", n_sweeps);
+	config.measure.add_observable("avg error", n_sweeps);
 	config.measure.add_vectorobservable("<n_r n_0>", config.l.max_distance() + 1,
 		n_prebin);
 	
