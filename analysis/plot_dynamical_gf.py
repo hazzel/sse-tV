@@ -92,7 +92,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "epsilon"
+	obs = "kekule"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -141,10 +141,10 @@ for f in filelist:
 			#y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
 			#err_tau = err_tau[numpy.isfinite(err_tau)]
 		elif obs == "kekule":
-			#y_tau = np.abs((y_tau[numpy.isfinite(y_tau)] - ArrangePlot(elist[i], "kekule")[0][0]**2.))
-			#err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "kekule")[0][0]*ArrangePlot(elist[i], "kekule")[1][0])**2.)
-			y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
-			err_tau = err_tau[numpy.isfinite(err_tau)]
+			y_tau = np.abs((y_tau[numpy.isfinite(y_tau)] - ArrangePlot(elist[i], "kekule")[0][0]**2.))
+			err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "kekule")[0][0]*ArrangePlot(elist[i], "kekule")[1][0])**2.)
+			#y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
+			#err_tau = err_tau[numpy.isfinite(err_tau)]
 		else:
 			y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
 			err_tau = err_tau[numpy.isfinite(err_tau)]
@@ -207,7 +207,7 @@ for f in filelist:
 		
 		
 		#nmin = len(x_tau)*0/32+5; nmax = len(x_tau)*15/32
-		nmin = len(x_tau)*0/32+1; nmax = len(x_tau)*10/32
+		nmin = len(x_tau)*0/32+5; nmax = len(x_tau)*15/32
 		#nmin = len(x_tau)*22/32; nmax = len(x_tau)*30/32-1
 		parameter, perr = fit_function( [0.1, 0.1, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
 		px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
