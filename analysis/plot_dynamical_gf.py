@@ -63,8 +63,8 @@ color_cycle = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'orange', 'darkgreen']
 marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 
 filelist = []
-filelist.append(glob.glob("../bin/job/*.out"))
-#filelist.append(glob.glob("../bin/job-2/*.out"))
+#filelist.append(glob.glob("../bin/job/*.out"))
+filelist.append(glob.glob("../bin/job-2/*.out"))
 #filelist.append(glob.glob("../bin/job/bac/V0.5L2T0.05.out"))
 #filelist.append(glob.glob("../bin/job/bac/V1.355L2T0.05.out"))
 #filelist.append(glob.glob("../bin/job-2/bac/L2V1.355T0.25.out"))
@@ -92,7 +92,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "kekule"
+	obs = "epsilon"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.

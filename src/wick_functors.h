@@ -55,7 +55,7 @@ struct wick_kekule
 					+ config.l.parity(b.first) * config.l.parity(a.first)
 					* td_gf(a.first, b.first) * td_gf(a.second, b.second);
 			}
-		return kek;
+		return kek / std::pow(config.l.n_bonds(), 2.);
 	}
 };
 
@@ -80,7 +80,7 @@ struct wick_epsilon
 					+ config.l.parity(b.first) * config.l.parity(a.first)
 					* td_gf(a.first, b.first) * td_gf(a.second, b.second);
 			}
-		return ep;
+		return ep / std::pow(config.l.n_bonds(), 2.);
 	}
 };
 
