@@ -474,7 +474,7 @@ class fast_update
 			for (auto& i : l.bonds("nearest neighbors"))
 				ep += -l.parity(i.first) * l.parity(i.second)
 					* equal_time_gf(i.first, i.second);
-			return ep;
+			return ep / l.n_bonds();
 		}
 		
 		double measure_kekule()

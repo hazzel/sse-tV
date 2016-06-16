@@ -76,6 +76,8 @@ class qr_stabilizer
 			if (n == 0)
 			{
 				U.front() = id_N; D.front() = id_N; V.front() = id_N;
+				norm_error = 0.;
+				n_error = 0;
 			}
 			
 			qr_solver.compute((b * U[n]) * D[n]);
@@ -90,6 +92,11 @@ class qr_stabilizer
 					V[n+1]);
 			else
 				recompute_equal_time_gf(U_l, D_l, V_l, U[n+1], D[n+1], V[n+1]);
+			
+			if (n == n_intervals - 1)
+			{
+				measure.add("norm_error", norm_error);
+			}
 		}
 	
 		//n = n_intervals, ..., 1 
@@ -98,6 +105,8 @@ class qr_stabilizer
 			if (n == n_intervals)
 			{
 				U.back() = id_N; D.back() = id_N; V.back() = id_N;
+				norm_error = 0.;
+				n_error = 0;
 			}
 			
 			qr_solver.compute(D[n] * (U[n] * b));
@@ -112,6 +121,11 @@ class qr_stabilizer
 					V_r);
 			else
 				recompute_equal_time_gf(U[n-1], D[n-1], V[n-1], U_r, D_r, V_r);
+
+			if (n == 1)
+			{
+				measure.add("norm_error", norm_error);
+			}
 		}
 		
 		void recompute_equal_time_gf(const dmatrix_t& U_l_, const dmatrix_t& D_l_,
@@ -139,11 +153,14 @@ class qr_stabilizer
 //					std::cout << "new gf" << std::endl;
 //					print_matrix(equal_time_gf);
 //				}
-				measure.add("norm error", (old_gf - equal_time_gf).norm());
-				measure.add("max error", (old_gf - equal_time_gf).lpNorm<Eigen::
-					Infinity>());
-				measure.add("avg error", (old_gf - equal_time_gf).lpNorm<1>()
-					/ old_gf.rows() / old_gf.cols());
+				norm_error = (old_gf - equal_time_gf).norm() / (n_error + 1)
+					+ n_error * norm_error / (n_error + 1);
+				++n_error;
+//				measure.add("norm error", (old_gf - equal_time_gf).norm());
+//				measure.add("max error", (old_gf - equal_time_gf).lpNorm<Eigen::
+//					Infinity>());
+//				measure.add("avg error", (old_gf - equal_time_gf).lpNorm<1>()
+//					/ old_gf.rows() / old_gf.cols());
 			}
 		}
 		
@@ -195,12 +212,18 @@ class qr_stabilizer
 				+ lhs.bottomRightCorner(N, N) * rhs.bottomRightCorner(N, N);
 			if (init)
 			{
-				if ((old_gf - equal_time_gf).norm() > 0.0000001)
-					std::cout << "error in stab: " << (old_gf - equal_time_gf).norm()
-						<< std::endl;
-				if ((old_td_gf - time_displaced_gf).norm() > 0.0000001)
-					std::cout << "error in td stab: " << (old_td_gf
-						- time_displaced_gf).norm() << std::endl;
+				norm_error = (old_gf - equal_time_gf).norm() / (n_error + 1)
+					+ n_error * norm_error / (n_error + 1);
+				++n_error;
+				norm_error = (old_td_gf - time_displaced_gf).norm() / (n_error + 1)
+					+ n_error * norm_error / (n_error + 1);
+				++n_error;
+//				if ((old_gf - equal_time_gf).norm() > 0.0000001)
+//					std::cout << "error in stab: " << (old_gf - equal_time_gf).norm()
+//						<< std::endl;
+//				if ((old_td_gf - time_displaced_gf).norm() > 0.0000001)
+//					std::cout << "error in td stab: " << (old_td_gf
+//						- time_displaced_gf).norm() << std::endl;
 			}
 		}
 	private:
@@ -230,5 +253,7 @@ class qr_stabilizer
 		dmatrix_t D_r;
 		dmatrix_t V_r;
 		Eigen::ColPivHouseholderQR<dmatrix_t> qr_solver;
+		double norm_error = 0.;
+		int n_error = 0;
 		bool init = false;
 };

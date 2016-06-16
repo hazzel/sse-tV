@@ -70,9 +70,9 @@ mc::mc(const std::string& dir)
 	config.measure.add_observable("<k>_1", n_prebin);
 	config.measure.add_observable("<k>_2", n_prebin);
 	config.measure.add_observable("energy", n_prebin);
-	config.measure.add_observable("norm error", n_sweeps);
-	config.measure.add_observable("max error", n_sweeps);
-	config.measure.add_observable("avg error", n_sweeps);
+	config.measure.add_observable("norm_error", n_prebin);
+//	config.measure.add_observable("max error", n_sweeps);
+//	config.measure.add_observable("avg error", n_sweeps);
 	config.measure.add_vectorobservable("<n_r n_0>", config.l.max_distance() + 1,
 		n_prebin);
 	
