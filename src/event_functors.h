@@ -45,8 +45,6 @@ struct event_max_order
 struct event_dynamic_measurement
 {
 	typedef fast_update<qr_stabilizer>::dmatrix_t matrix_t;
-	typedef std::function<double(const matrix_t&, const matrix_t&, Random&,
-		const lattice&, const parameters&)> function_t;
 
 	configuration& config;
 	Random& rng;
