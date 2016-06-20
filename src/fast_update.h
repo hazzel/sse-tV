@@ -488,7 +488,7 @@ class fast_update
 			for (auto& i : l.bonds("kekule"))
 				kek += -l.parity(i.first) * l.parity(i.second)
 					* equal_time_gf(i.first, i.second);
-			return kek;
+			return kek / l.n_bonds();
 		}
 	
 		void measure_density_correlations(std::vector<double>& corr)
