@@ -69,7 +69,7 @@ filelist = []
 #filelist.append(glob.glob("../bin/job/bac/V1.355L2T0.05.out"))
 #filelist.append(glob.glob("../bin/job-2/bac/L6V1.355T0.2.out"))
 
-filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L6-V1.355-T0.30-ep-kek/*task*.out"))
+filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/bin/job-L6-V1.355-T0.20-ep-kek/*task*.out"))
 
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.04/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L6-V1.355-T0.04/*task*.out"))
@@ -94,7 +94,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "kekule"
+	obs = "epsilon"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -138,13 +138,13 @@ for f in filelist:
 		y_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[0])
 		err_tau = np.array(ArrangePlot(elist[i], "dyn_"+obs+"_tau")[1])
 		if obs == "epsilon":
-			#y_tau = np.abs((y_tau[numpy.isfinite(y_tau)] - (ArrangePlot(elist[i], "epsilon")[0][0]/108.)**2.))
-			#err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "epsilon")[0][0]*ArrangePlot(elist[i], "epsilon")[1][0]/108.**2.)**2.)
-			y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
-			err_tau = err_tau[numpy.isfinite(err_tau)]
+			y_tau = np.abs((y_tau[numpy.isfinite(y_tau)] - (ArrangePlot(elist[i], "epsilon")[0][0])**2.))
+			err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "epsilon")[0][0]*ArrangePlot(elist[i], "epsilon")[1][0]**2.)**2.)
+			#y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
+			#err_tau = err_tau[numpy.isfinite(err_tau)]
 		elif obs == "kekule":
-			y_tau = np.abs((y_tau[numpy.isfinite(y_tau)] - (ArrangePlot(elist[i], "kekule")[0][0]/108.)**2.))
-			err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "kekule")[0][0]*ArrangePlot(elist[i], "kekule")[1][0]/108.**2.)**2.)
+			y_tau = np.abs((y_tau[numpy.isfinite(y_tau)] - (ArrangePlot(elist[i], "kekule")[0][0])**2.))
+			err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "kekule")[0][0]*ArrangePlot(elist[i], "kekule")[1][0]**2.)**2.)
 			#y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
 			#err_tau = err_tau[numpy.isfinite(err_tau)]
 		else:
@@ -210,14 +210,15 @@ for f in filelist:
 		log_y_tau = np.log(y_tau)
 		log_y_tau_err = err_tau / y_tau
 		
+		
 		#nmin = len(x_tau)*0/32+5; nmax = len(x_tau)*15/32
-		nmin = len(x_tau)*0/32; nmax = len(x_tau)*6/32
+		nmin = len(x_tau)*0/32; nmax = len(x_tau)*16/32
 		#nmin = len(x_tau)*22/32; nmax = len(x_tau)*30/32-1
-		#parameter, perr = fit_function( [1., 1., 3.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
-		parameter, perr = fit_function( [1., 1., 3.], x_tau[nmin:nmax], log_y_tau[nmin:nmax], LinearFunction, datayerrors=log_y_tau_err[nmin:nmax])
+		parameter, perr = fit_function( [2.3, 3., 2.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
+		#parameter, perr = fit_function( [1., 1., 3.], x_tau[nmin:nmax], log_y_tau[nmin:nmax], LinearFunction, datayerrors=log_y_tau_err[nmin:nmax])
 		px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
-		#ax2.plot(px, FitFunctionL(px, *parameter), 'k-', linewidth=3.0)
-		ax2.plot(px, np.exp(LinearFunction(px, *parameter)), 'k-', linewidth=3.0)
+		ax2.plot(px, FitFunctionL(px, *parameter), 'k-', linewidth=3.0)
+		#ax2.plot(px, np.exp(LinearFunction(px, *parameter)), 'k-', linewidth=3.0)
 		#d = -int(np.log10(abs(perr[2])))+2
 		#ax2.text(0.10, 0.98, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(abs(parameter[2])) + "(" + str(round(perr[2], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
 		print parameter

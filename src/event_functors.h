@@ -56,7 +56,6 @@ struct event_dynamic_measurement
 	std::vector<std::string> names;
 
 	event_dynamic_measurement(configuration& config_, Random& rng_,
-//		int n_prebin, std::initializer_list<std::string> observables)
 		int n_prebin, const std::vector<std::string>& observables)
 		: config(config_), rng(rng_)
 	{
