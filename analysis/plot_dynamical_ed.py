@@ -88,7 +88,7 @@ elif obs == "tp":
 	ed_n = 15
 	parity = 1.
 
-T = 0.075
+T = 0.01
 h = 1.355
 L = 2
 ed_glob = glob.glob("../../ctint/data/ed*" + "L_" + str(int(L)) + "*V_" + format(h, '.6f') + "*T_" + format(T, '.6f') + "*")
@@ -117,7 +117,8 @@ if len(ed_glob) > 0:
 		else:
 			e0 = 0.
 
-		ed_y = np.abs(ed_data[ed_n] - e0**2.)
+		#ed_y = np.abs(ed_data[ed_n] - e0**2.)
+		ed_y = np.abs(ed_data[ed_n])
 
 figure, ax2 = plt.subplots(1, 1)
 figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
@@ -137,15 +138,15 @@ if len(ed_glob) > 0 and len(ed_data) > ed_n:
 	#ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[3])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
 	
 	if obs == "epsilon":
-		n_min = 15
-		parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[n_min:len(ed_data[ed_n])*16/32], ed_y[n_min:len(ed_data[ed_n])*16/32], p0=[28., 2.5, 4.])
+		n_min = 1
+		parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[n_min:len(ed_data[ed_n])*16/32], ed_y[n_min:len(ed_data[ed_n])*16/32], p0=[28., 2.5, 3.])
 	elif obs == "sp":
 		parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[len(ed_data[ed_n])/4:len(ed_data[ed_n])/2], ed_data[ed_n][len(ed_data[ed_n])/4:len(ed_data[ed_n])/2], p0=[0.1, 0.1, 1.])
 		#parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionR, ed_tau[len(ed_data[ed_n])/2:len(ed_data[ed_n])-15], ed_data[ed_n][len(ed_data[ed_n])/2:len(ed_data[ed_n])-15], p0=[0.1, 0.1, 1.])
 	else:
 		parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[3:len(ed_data[ed_n])*12/32], ed_data[ed_n][3:len(ed_data[ed_n])*12/32], p0=[0.1, 0.1, 1.])
 	#px = np.linspace(ed_tau[0], ed_tau[len(ed_data[ed_n])/2], 1000)
-	px = np.linspace(ed_tau[n_min], ed_tau[len(ed_data[ed_n])*15/32], 1000)
+	px = np.linspace(ed_tau[n_min], ed_tau[len(ed_data[ed_n])*16/32], 1000)
 	#px = np.linspace(ed_tau[len(ed_data[ed_n])/2], ed_tau[len(ed_data[ed_n])-1], 1000)
 	ax2.plot(px, FitFunctionL(px, *parameter_ed), 'r-', linewidth=3.0)
 	ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[2])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
