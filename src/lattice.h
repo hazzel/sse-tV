@@ -52,10 +52,11 @@ class lattice
 				std::cerr << "Neighbor map already exists." << std::endl;
 				return;
 			}
-			neighbor_maps[name] = nested_vector_t(n_sites());
-			for (int i = 0; i < n_sites(); ++i)
+			int ns = n_sites();
+			neighbor_maps[name] = nested_vector_t(ns);
+			for (int i = 0; i < ns; ++i)
 			{
-				for (int j = 0; j < n_sites(); ++j)
+				for (int j = 0; j < ns; ++j)
 				{
 					if (fun(i, j))
 						neighbor_maps[name][i].push_back(j);
@@ -71,9 +72,10 @@ class lattice
 				std::cerr << "Bond map already exists." << std::endl;
 				return;
 			}
-			for (int i = 0; i < n_sites(); ++i)
+			int ns = n_sites();
+			for (int i = 0; i < ns; ++i)
 			{
-				for (int j = 0; j < n_sites(); ++j)
+				for (int j = 0; j < ns; ++j)
 				{
 					if (fun(i, j))
 						bond_maps[name].push_back({i, j});
@@ -170,9 +172,10 @@ class lattice
 
 		void print_distance_map() const
 		{
-			for (int i = 0; i < n_sites(); ++i)
+			int ns = n_sites();
+			for (int i = 0; i < ns; ++i)
 			{
-				for (int j = 0; j < n_sites(); ++j)
+				for (int j = 0; j < ns; ++j)
 				{
 					std::cout << "d(" << i << ", " << j << ") = "
 						<< distance_map[i][j] << std::endl;
@@ -182,9 +185,10 @@ class lattice
 	private:
 		void generate_distance_map()
 		{
-			distance_map.resize(boost::extents[n_sites()][n_sites()]);
+			int ns = n_sites();
+			distance_map.resize(boost::extents[ns][ns]);
 
-			for (int i = 0; i < n_sites(); ++i)
+			for (int i = 0; i < ns; ++i)
 			{
 				boost::breadth_first_search(*graph, i, boost::visitor(
 					boost::make_bfs_visitor(boost::record_distances(

@@ -64,7 +64,7 @@ color_cycle = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'orange', 'darkgreen']
 marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 
 
-obs = "epsilon"
+obs = "kekule"
 if obs == "M2":
 	ed_n = 1
 	parity = 1.
@@ -88,7 +88,7 @@ elif obs == "tp":
 	ed_n = 15
 	parity = 1.
 
-T = 0.01
+T = 0.1
 h = 1.355
 L = 2
 ed_glob = glob.glob("../../ctint/data/ed*" + "L_" + str(int(L)) + "*V_" + format(h, '.6f') + "*T_" + format(T, '.6f') + "*")
@@ -98,27 +98,7 @@ if len(ed_glob) > 0:
 	n_ed_tau = int(ed_data[0][8])
 	n_ed_mat = int(ed_data[0][9])
 	ed_tau = np.linspace(0., 1./T, n_ed_tau + 1)
-	
-	if obs == "epsilon":
-		if T == 0.001:
-			e0 = -0.44975132
-		elif T == 0.01:
-			e0 = -0.44975132
-		elif T == 0.025:
-			e0 = -0.44975132
-		elif T == 0.075:
-			e0 = -0.44975067
-		elif T == 0.10:
-			e0 = -0.4497369
-		elif T == 0.20:
-			e0 = -0.44821574
-		elif T == 0.20:
-			e0 = -0.44203009
-		else:
-			e0 = 0.
-
-		#ed_y = np.abs(ed_data[ed_n] - e0**2.)
-		ed_y = np.abs(ed_data[ed_n])
+	ed_y = np.abs(ed_data[ed_n])
 
 figure, ax2 = plt.subplots(1, 1)
 figure.suptitle(r"$L = " + str(L) + ",\ V = " + str(h) + ",\ T = " + str(T) + "$")
@@ -138,12 +118,16 @@ if len(ed_glob) > 0 and len(ed_data) > ed_n:
 	#ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[3])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
 	
 	if obs == "epsilon":
-		n_min = 1
+		n_min = 15
+		parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[n_min:len(ed_data[ed_n])*16/32], ed_y[n_min:len(ed_data[ed_n])*16/32], p0=[28., 2.5, 3.])
+	elif obs == "kekule":
+		n_min = 15
 		parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[n_min:len(ed_data[ed_n])*16/32], ed_y[n_min:len(ed_data[ed_n])*16/32], p0=[28., 2.5, 3.])
 	elif obs == "sp":
 		parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[len(ed_data[ed_n])/4:len(ed_data[ed_n])/2], ed_data[ed_n][len(ed_data[ed_n])/4:len(ed_data[ed_n])/2], p0=[0.1, 0.1, 1.])
 		#parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionR, ed_tau[len(ed_data[ed_n])/2:len(ed_data[ed_n])-15], ed_data[ed_n][len(ed_data[ed_n])/2:len(ed_data[ed_n])-15], p0=[0.1, 0.1, 1.])
 	else:
+		n_min = 15
 		parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[3:len(ed_data[ed_n])*12/32], ed_data[ed_n][3:len(ed_data[ed_n])*12/32], p0=[0.1, 0.1, 1.])
 	#px = np.linspace(ed_tau[0], ed_tau[len(ed_data[ed_n])/2], 1000)
 	px = np.linspace(ed_tau[n_min], ed_tau[len(ed_data[ed_n])*16/32], 1000)

@@ -18,7 +18,7 @@ from texify import *
 import scipy.integrate
 
 def FitFunctionL(x, a, b, c):
-	return a + b*np.exp(-c*x)
+	return 0.95 + b*np.exp(-c*x)
 
 def FitFunctionR(x, a, b, c):
 	return a + b*np.exp(c*x)
@@ -69,7 +69,8 @@ filelist = []
 #filelist.append(glob.glob("../bin/job/bac/V1.355L2T0.05.out"))
 #filelist.append(glob.glob("../bin/job-2/bac/L6V1.355T0.2.out"))
 
-filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/bin/job-L6-V1.355-T0.20-ep-kek/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/bin/job-L6-V1.355-T0.20-ep-kek/*task*.out"))
+filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/bin/job-L6-V1.355-T0.10-ep-kek/*task*.out"))
 
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.04/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L6-V1.355-T0.04/*task*.out"))
@@ -94,7 +95,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "epsilon"
+	obs = "kekule"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -212,9 +213,10 @@ for f in filelist:
 		
 		
 		#nmin = len(x_tau)*0/32+5; nmax = len(x_tau)*15/32
-		nmin = len(x_tau)*0/32; nmax = len(x_tau)*16/32
+		nmin = len(x_tau)*1.5/32; nmax = len(x_tau)*12/32
+		#nmin = len(x_tau)*4/32; nmax = len(x_tau)*12/32
 		#nmin = len(x_tau)*22/32; nmax = len(x_tau)*30/32-1
-		parameter, perr = fit_function( [2.3, 3., 2.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
+		parameter, perr = fit_function( [1., 6., 1.2], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
 		#parameter, perr = fit_function( [1., 1., 3.], x_tau[nmin:nmax], log_y_tau[nmin:nmax], LinearFunction, datayerrors=log_y_tau_err[nmin:nmax])
 		px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
 		ax2.plot(px, FitFunctionL(px, *parameter), 'k-', linewidth=3.0)
@@ -232,12 +234,16 @@ for f in filelist:
 			
 			if obs == "epsilon":
 				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[3:len(ed_data[ed_n])*12/32], ed_data[ed_n][3:len(ed_data[ed_n])*12/32], p0=[28., 2.5, 4.])
+			elif obs == "kekule":
+				n_min = 10
+				n_max = len(ed_data[ed_n])*16/32
+				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[n_min:n_max], ed_data[ed_n][n_min:n_max], p0=[28., 2.5, 4.])
 			elif obs == "sp":
 				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[len(ed_data[ed_n])/4:len(ed_data[ed_n])/2], ed_data[ed_n][len(ed_data[ed_n])/4:len(ed_data[ed_n])/2], p0=[0.1, 0.1, 1.])
 				#parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionR, ed_tau[len(ed_data[ed_n])/2:len(ed_data[ed_n])-15], ed_data[ed_n][len(ed_data[ed_n])/2:len(ed_data[ed_n])-15], p0=[0.1, 0.1, 1.])
 			else:
 				parameter_ed, perr_ed = scipy.optimize.curve_fit( FitFunctionL, ed_tau[3:len(ed_data[ed_n])*12/32], ed_data[ed_n][3:len(ed_data[ed_n])*12/32], p0=[0.1, 0.1, 1.])
-			px = np.linspace(ed_tau[0], ed_tau[len(ed_data[ed_n])/2], 1000)
+			px = np.linspace(ed_tau[n_min], ed_tau[n_max], 1000)
 			#px = np.linspace(ed_tau[len(ed_data[ed_n])/2], ed_tau[len(ed_data[ed_n])-1], 1000)
 			ax2.plot(px, FitFunctionL(px, *parameter_ed), 'r-', linewidth=3.0)
 			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[2])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
