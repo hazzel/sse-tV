@@ -61,7 +61,6 @@ class mc
 		mctools qmc;
 		parser pars;
 		int sweep;
-		int measure_cnt;
 		int n_static_cycles;
 		int n_dyn_cycles;
 		int n_warmup;

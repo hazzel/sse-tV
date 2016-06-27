@@ -12,7 +12,6 @@ mc::mc(const std::string& dir)
 	//Read parameters
 	pars.read_file(dir);
 	sweep = 0;
-	measure_cnt = 0;
 	int n_sweeps = pars.value_or_default<int>("SWEEPS", 10000);
 	n_static_cycles = pars.value_or_default<int>("static_cycles", 300);
 	n_dyn_cycles = pars.value_or_default<int>("dyn_cycles", 300);
