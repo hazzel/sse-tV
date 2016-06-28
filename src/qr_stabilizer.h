@@ -76,8 +76,6 @@ class qr_stabilizer
 			if (n == 0)
 			{
 				U.front() = id_N; D.front() = id_N; V.front() = id_N;
-				norm_error = 0.;
-				n_error = 0;
 			}
 			
 			qr_solver.compute((b * U[n]) * D[n]);
@@ -96,6 +94,8 @@ class qr_stabilizer
 			if (n == n_intervals - 1)
 			{
 				measure.add("norm_error", norm_error);
+				norm_error = 0;
+				n_error = 0;
 			}
 		}
 	
@@ -105,8 +105,6 @@ class qr_stabilizer
 			if (n == n_intervals)
 			{
 				U.back() = id_N; D.back() = id_N; V.back() = id_N;
-				norm_error = 0.;
-				n_error = 0;
 			}
 			
 			qr_solver.compute(D[n] * (U[n] * b));
@@ -125,6 +123,8 @@ class qr_stabilizer
 			if (n == 1)
 			{
 				measure.add("norm_error", norm_error);
+				norm_error = 0;
+				n_error = 0;
 			}
 		}
 		
