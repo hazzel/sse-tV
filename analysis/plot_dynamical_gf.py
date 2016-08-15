@@ -18,7 +18,7 @@ from texify import *
 import scipy.integrate
 
 def FitFunctionL(x, a, b, c):
-	return 0.95 + b*np.exp(-c*x)
+	return a + b*np.exp(-c*x)
 
 def FitFunctionR(x, a, b, c):
 	return a + b*np.exp(c*x)
@@ -69,8 +69,12 @@ filelist = []
 #filelist.append(glob.glob("../bin/job/bac/V1.355L2T0.05.out"))
 #filelist.append(glob.glob("../bin/job-2/bac/L6V1.355T0.2.out"))
 
-#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/bin/job-L6-V1.355-T0.20-ep-kek/*task*.out"))
-filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/bin/job-L6-V1.355-T0.10-ep-kek/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/jobs/new_data/job-L6-V1.355-T0.10-ep-kek_3/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/jobs/new_data/job-L6-V1.355-T0.05-ep-kek/*task*.out"))
+filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/jobs/new_data/job-L9-V1.355-T0.10-ep/*task*.out"))
+
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L6-V1.355-T0.10-ep-kek/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L6-V1.355-T0.05-ep-kek/*task*.out"))
 
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L4-V1.355-T0.04/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L6-V1.355-T0.04/*task*.out"))
@@ -211,12 +215,11 @@ for f in filelist:
 		log_y_tau = np.log(y_tau)
 		log_y_tau_err = err_tau / y_tau
 		
-		
-		#nmin = len(x_tau)*0/32+5; nmax = len(x_tau)*15/32
-		nmin = len(x_tau)*1.5/32; nmax = len(x_tau)*12/32
-		#nmin = len(x_tau)*4/32; nmax = len(x_tau)*12/32
-		#nmin = len(x_tau)*22/32; nmax = len(x_tau)*30/32-1
-		parameter, perr = fit_function( [1., 6., 1.2], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
+		'''
+		nmin = len(x_tau)*3/32; nmax = len(x_tau)*16/32
+		#nmin = len(x_tau)*8/32; nmax = len(x_tau)*16/32
+		#parameter, perr = fit_function( [1., 6., 1.2], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
+		parameter, perr = fit_function( [0.01, 0.01, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
 		#parameter, perr = fit_function( [1., 1., 3.], x_tau[nmin:nmax], log_y_tau[nmin:nmax], LinearFunction, datayerrors=log_y_tau_err[nmin:nmax])
 		px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
 		ax2.plot(px, FitFunctionL(px, *parameter), 'k-', linewidth=3.0)
@@ -248,7 +251,7 @@ for f in filelist:
 			ax2.plot(px, FitFunctionL(px, *parameter_ed), 'r-', linewidth=3.0)
 			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[2])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
 			print parameter_ed
-		
+		'''
 		
 		'''
 		ax3.set_xlabel(r"$n$")
