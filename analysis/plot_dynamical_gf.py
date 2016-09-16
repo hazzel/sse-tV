@@ -69,9 +69,9 @@ filelist = []
 #filelist.append(glob.glob("../bin/job/bac/V1.355L2T0.05.out"))
 #filelist.append(glob.glob("../bin/job-2/bac/L6V1.355T0.2.out"))
 
-#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/jobs/new_data/job-L6-V1.355-T0.10-ep-kek_3/*task*.out"))
+filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/jobs/new_data/job-L6-V1.355-T0.10-ep-kek_4/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/jobs/new_data/job-L6-V1.355-T0.05-ep-kek/*task*.out"))
-filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/jobs/new_data/job-L9-V1.355-T0.10-ep/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/jobs/new_data/job-L9-V1.355-T0.10-ep/*task*.out"))
 
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L6-V1.355-T0.10-ep-kek/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/cluster_work/code/sse-tV/jobs/spectroscopy/job-L6-V1.355-T0.05-ep-kek/*task*.out"))
@@ -99,29 +99,34 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "kekule"
+	obs = "epsilon"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
 	if obs == "kekule":
 		ed_n = 3
 		parity = 1.
+		ax2.set_ylabel(r"$\left \langle O_{kek}(\tau) O_{kek} \right \rangle - \left \langle O_{kek}\right \rangle^2$")
 	elif obs == "chern":
 		ed_n = 5
 		parity = 1.
 	elif obs == "epsilon":
 		ed_n = 7
 		parity = 1.
+		ax2.set_ylabel(r"$\left \langle O_{\epsilon}(\tau) O_{\epsilon} \right \rangle - \left \langle O_{\epsilon}\right \rangle^2$")
 	elif obs == "epsilon_nn":
 		ed_n = 9
 		parity = 1.
 		obs = "epsilon"
+		ax2.set_ylabel(r"$\left \langle O_{\epsilon}(\tau) O_{\epsilon} \right \rangle - \left \langle O_{\epsilon}\right \rangle^2$")
 	elif obs == "sp":
 		ed_n = 13
 		parity = 1.
+		ax2.set_ylabel(r"$\left \langle O_{sp}(\tau) O_{sp} \right \rangle$")
 	elif obs == "tp":
 		ed_n = 15
 		parity = 1.
+		ax2.set_ylabel(r"$\left \langle O_{tp}(\tau) O_{tp} \right \rangle$")
 		
 	for i in range(len(plist)):
 		n_matsubara = int(plist[i]["matsubara_freqs"])
@@ -202,7 +207,6 @@ for f in filelist:
 		'''
 
 		ax2.set_xlabel(r"$\tau$")
-		ax2.set_ylabel(r"$"+obs+r"(\tau)$")
 		ax2.set_yscale("log")
 		ax2.plot(x_tau, y_tau, marker="o", color="green", markersize=10.0, linewidth=2.0, label=r'$L='+str(int(L))+'$')
 		(_, caps, _) = ax2.errorbar(x_tau, y_tau, yerr=err_tau, marker='None', capsize=8, color="green")
@@ -215,17 +219,19 @@ for f in filelist:
 		log_y_tau = np.log(y_tau)
 		log_y_tau_err = err_tau / y_tau
 		
-		'''
+		
 		nmin = len(x_tau)*3/32; nmax = len(x_tau)*16/32
-		#nmin = len(x_tau)*8/32; nmax = len(x_tau)*16/32
+		#nmin = len(x_tau)*7/32+2; nmax = len(x_tau)*16/32
 		#parameter, perr = fit_function( [1., 6., 1.2], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
 		parameter, perr = fit_function( [0.01, 0.01, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
 		#parameter, perr = fit_function( [1., 1., 3.], x_tau[nmin:nmax], log_y_tau[nmin:nmax], LinearFunction, datayerrors=log_y_tau_err[nmin:nmax])
 		px = np.linspace(x_tau[nmin], x_tau[nmax], 1000)
 		ax2.plot(px, FitFunctionL(px, *parameter), 'k-', linewidth=3.0)
 		#ax2.plot(px, np.exp(LinearFunction(px, *parameter)), 'k-', linewidth=3.0)
-		#d = -int(np.log10(abs(perr[2])))+2
-		#ax2.text(0.10, 0.98, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(abs(parameter[2])) + "(" + str(round(perr[2], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
+		d = -int(np.log10(abs(perr[2])))+2
+		ax2.text(0.10, 0.98, r"$f(\tau)=a + b \exp(-\tau \cdot \Delta_{FIT})$", transform=ax2.transAxes, fontsize=20, va='top')
+		ax2.text(0.10, 0.93, r"$\Delta_{FIT} = " + ("{:."+str(d)+"f}").format(abs(parameter[2])) + "(" + str(round(perr[2], d)*10.**d).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
+		ax2.text(0.10, 0.88, r"$\Delta_{FIT}\cdot \sqrt{72} = " + ("{:."+str(1)+"f}").format(abs(parameter[2])*72.**0.5) + "(" + str(round(perr[2]*72.**0.5, 1)*10.**1).partition('.')[0] + ")$", transform=ax2.transAxes, fontsize=20, va='top')
 		print parameter
 		print perr
 		
@@ -251,7 +257,7 @@ for f in filelist:
 			ax2.plot(px, FitFunctionL(px, *parameter_ed), 'r-', linewidth=3.0)
 			ax2.text(0.10, 0.93, r"$\Delta_{FIT\ ED} = " + ("{:."+str(d)+"f}").format(abs(parameter_ed[2])) + "$", transform=ax2.transAxes, fontsize=20, va='top')
 			print parameter_ed
-		'''
+		
 		
 		'''
 		ax3.set_xlabel(r"$n$")
