@@ -55,6 +55,20 @@ struct wick_kekule
 					+ config.l.parity(b.first) * config.l.parity(a.first)
 					* td_gf(a.first, b.first) * td_gf(a.second, b.second);
 			}
+		for (auto& a : config.l.bonds("kekule"))
+			for (auto& b : config.l.bonds("kekule_2"))
+			{
+				kek -= 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
+					+ config.l.parity(b.first) * config.l.parity(a.first)
+					* td_gf(a.first, b.first) * td_gf(a.second, b.second));
+			}
+		for (auto& a : config.l.bonds("kekule_2"))
+			for (auto& b : config.l.bonds("kekule_2"))
+			{
+				kek += et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
+					+ config.l.parity(b.first) * config.l.parity(a.first)
+					* td_gf(a.first, b.first) * td_gf(a.second, b.second);
+			}
 		return kek / std::pow(config.l.n_bonds(), 2.);
 	}
 };
@@ -101,6 +115,7 @@ struct wick_chern
 		for (auto& a : config.l.bonds("chern"))
 			for (auto& b : config.l.bonds("chern"))
 			{
+				/*
 				ch += (et_gf_t(a.second, a.first) - et_gf_t(a.first, a.second))
 					* (et_gf_0(b.second, b.first) - et_gf_0(b.first, b.second))
 					+ config.l.parity(a.first) * config.l.parity(b.second)
@@ -111,6 +126,10 @@ struct wick_chern
 					* td_gf(a.second, b.second) * td_gf(a.first, b.first)
 					+ config.l.parity(a.second) * config.l.parity(b.first)
 					* td_gf(a.second, b.first) * td_gf(a.first, b.first);
+				*/
+				ch += et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
+					+ config.l.parity(a.first) * config.l.parity(b.first)
+					* td_gf(a.first, b.first) * td_gf(a.second, b.second);
 			}
 		return -ch;
 	}
