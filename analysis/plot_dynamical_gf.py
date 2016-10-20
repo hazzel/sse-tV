@@ -63,13 +63,13 @@ color_cycle = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'orange', 'darkgreen']
 marker_cycle = ['o', 'D', '<', 'p', '>', 'v', '*', '^', 's']
 
 filelist = []
-#filelist.append(glob.glob("../bin/job/*.out"))
+filelist.append(glob.glob("../bin/job/*.out"))
 #filelist.append(glob.glob("../bin/job-2/*.out"))
 #filelist.append(glob.glob("../bin/job/bac/V0.5L2T0.05.out"))
 #filelist.append(glob.glob("../bin/job/bac/V1.355L2T0.05.out"))
 #filelist.append(glob.glob("../bin/job-2/bac/L6V1.355T0.2.out"))
 
-filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/jobs/new_data/job-L6-V1.355-T0.10-ep-kek_4/*task*.out"))
+#filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/jobs/new_data/job-L6-V1.355-T0.10-ep-kek_4/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/jobs/new_data/job-L6-V1.355-T0.05-ep-kek/*task*.out"))
 #filelist.append(glob.glob("/net/home/lxtsfs1/tpc/hesselmann/code/sse-tV/jobs/new_data/job-L9-V1.355-T0.10-ep/*task*.out"))
 
@@ -99,7 +99,7 @@ for f in filelist:
 	plist = ParseParameters(f)
 	elist = ParseEvalables(f)
 
-	obs = "epsilon"
+	obs = "sp"
 	if obs == "M2":
 		ed_n = 1
 		parity = 1.
@@ -150,11 +150,6 @@ for f in filelist:
 		if obs == "epsilon":
 			y_tau = np.abs((y_tau[numpy.isfinite(y_tau)] - (ArrangePlot(elist[i], "epsilon")[0][0])**2.))
 			err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "epsilon")[0][0]*ArrangePlot(elist[i], "epsilon")[1][0]**2.)**2.)
-			#y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
-			#err_tau = err_tau[numpy.isfinite(err_tau)]
-		elif obs == "kekule":
-			y_tau = np.abs((y_tau[numpy.isfinite(y_tau)] - (ArrangePlot(elist[i], "kekule")[0][0])**2.))
-			err_tau = np.sqrt(err_tau[numpy.isfinite(err_tau)]**2. + (2.*ArrangePlot(elist[i], "kekule")[0][0]*ArrangePlot(elist[i], "kekule")[1][0]**2.)**2.)
 			#y_tau = np.abs(y_tau[numpy.isfinite(y_tau)])
 			#err_tau = err_tau[numpy.isfinite(err_tau)]
 		else:
@@ -218,9 +213,9 @@ for f in filelist:
 		
 		log_y_tau = np.log(y_tau)
 		log_y_tau_err = err_tau / y_tau
+	
 		
-		
-		nmin = len(x_tau)*3/32; nmax = len(x_tau)*16/32
+		nmin = len(x_tau)*2/32; nmax = len(x_tau)*11/32
 		#nmin = len(x_tau)*7/32+2; nmax = len(x_tau)*16/32
 		#parameter, perr = fit_function( [1., 6., 1.2], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])
 		parameter, perr = fit_function( [0.01, 0.01, 1.], x_tau[nmin:nmax], y_tau[nmin:nmax], FitFunctionL, datayerrors=err_tau[nmin:nmax])

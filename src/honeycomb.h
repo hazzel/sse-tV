@@ -121,8 +121,9 @@ struct honeycomb
 //		points["Gamma"] = closest_k_point({0., 0.});
 //		points["M"] = closest_k_point({2.*pi/3., 0.});
 
-		points["K"] = {2.*pi/9., 2.*pi/9.*(2. - 1./std::sqrt(3.))};
+		//points["K"] = {2.*pi/9., 2.*pi/9.*(2. - 1./std::sqrt(3.))};
 //		points["K"] = {2.*pi/(3.*std::sqrt(3.)), 2.*pi/3.};
+		points["K"] = closest_k_point({4.*pi/3., 0.});
 		
 //		points["K"] = {2.*pi/3., 2.*pi/3./std::sqrt(3.)};
 		l.add_symmetry_points(points);
@@ -226,6 +227,11 @@ struct honeycomb
 		(lattice::pair_vector_t& list)
 		{
 			int N = l.n_sites();
+			if (L == 2)
+			{
+				list = {{0, 4}, {4, 2}, {2, 0}, {2, 6}, {6, 4}, {0, 6}};
+				return;
+			}
 
 			for (int i = 0; i < L; ++i)
 				for (int j = 0; j < L; ++j)
@@ -254,6 +260,11 @@ struct honeycomb
 		(lattice::pair_vector_t& list)
 		{
 			int N = l.n_sites();
+			if (L == 2)
+			{
+				list = {{1, 5}, {5, 3}, {3, 1}, {3, 7}, {7, 5}, {1, 7}};
+				return;
+			}
 
 			for (int i = 0; i < L; ++i)
 				for (int j = 0; j < L; ++j)
