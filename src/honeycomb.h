@@ -28,15 +28,11 @@ struct honeycomb
 
 	honeycomb(int L_ = 6)
 		: L(L_),
-//			a1(3./2., std::sqrt(3.)/2.), a2(3./2., -std::sqrt(3.)/2.),
-//			delta(1./2., std::sqrt(3.)/2.)
-			a1(std::sqrt(3.), 0.), a2(std::sqrt(3.)/2., 3./2.),
-			delta(0., 1.)
+			a1(3./2., std::sqrt(3.)/2.), a2(3./2., -std::sqrt(3.)/2.),
+			delta(1./2., std::sqrt(3.)/2.)
 	{
-//		b1 = Eigen::Vector2d(2.*pi/3., 2.*pi/std::sqrt(3.));
-//		b2 = Eigen::Vector2d(2.*pi/3., -2.*pi/std::sqrt(3.));
-		b1 = Eigen::Vector2d(2.*pi/std::sqrt(3.), -1./3.);
-		b2 = Eigen::Vector2d(0., 2./3.);
+		b1 = Eigen::Vector2d(2.*pi/3., 2.*pi/std::sqrt(3.));
+		b2 = Eigen::Vector2d(2.*pi/3., -2.*pi/std::sqrt(3.));
 	}
 
 	graph_t* graph()
@@ -67,8 +63,8 @@ struct honeycomb
 					boost::add_edge(i, (i + 1 + n_vertices) % n_vertices, *g);
 					boost::add_edge(i, (i - 1 + n_vertices) % n_vertices, *g);
 				}
-				double c1 = static_cast<int>((i-1)  / (2*L));
-				double c2 = static_cast<int>((i-1)  % (2*L)) / 2;
+				double c1 = static_cast<int>((i-1)  % (2*L)) / 2;
+				double c2 = static_cast<int>((i-1)  / (2*L));
 				real_space_map.push_back(Eigen::Vector2d{c1*a1 + c2*a2 + delta});
 			}
 			else
@@ -85,8 +81,8 @@ struct honeycomb
 					boost::add_edge(i, (i - 1 + n_vertices) % n_vertices, *g);
 					boost::add_edge(i, (i + 1 + n_vertices) % n_vertices, *g);
 				}
-				double c1 = static_cast<int>(i  / (2*L));
-				double c2 = static_cast<int>(i  % (2*L)) / 2;
+				double c1 = static_cast<int>(i  % (2*L)) / 2;
+				double c2 = static_cast<int>(i  / (2*L));
 				real_space_map.push_back(Eigen::Vector2d{c1 * a1 + c2 * a2});
 			}
 		}
@@ -116,16 +112,10 @@ struct honeycomb
 		//Symmetry points
 		std::map<std::string, Eigen::Vector2d> points;
 
-//		points["K"] = closest_k_point({2.*pi/3., 2.*pi/3./std::sqrt(3.)});
-//		points["Kp"] = closest_k_point({2.*pi/3., -2.*pi/3./std::sqrt(3.)});
-//		points["Gamma"] = closest_k_point({0., 0.});
-//		points["M"] = closest_k_point({2.*pi/3., 0.});
-
-		//points["K"] = {2.*pi/9., 2.*pi/9.*(2. - 1./std::sqrt(3.))};
-//		points["K"] = {2.*pi/(3.*std::sqrt(3.)), 2.*pi/3.};
-		points["K"] = closest_k_point({4.*pi/3., 0.});
-		
-//		points["K"] = {2.*pi/3., 2.*pi/3./std::sqrt(3.)};
+		points["K"] = closest_k_point({2.*pi/3., 2.*pi/3./std::sqrt(3.)});
+		points["Kp"] = closest_k_point({2.*pi/3., -2.*pi/3./std::sqrt(3.)});
+		points["Gamma"] = closest_k_point({0., 0.});
+		points["M"] = closest_k_point({2.*pi/3., 0.});
 		l.add_symmetry_points(points);
 
 		//Site maps
@@ -135,6 +125,9 @@ struct honeycomb
 		l.generate_bond_map("nearest neighbors", [&]
 			(lattice::vertex_t i, lattice::vertex_t j)
 			{ return l.distance(i, j) == 1; });
+		l.generate_bond_map("d3_bonds", [&]
+			(lattice::vertex_t i, lattice::vertex_t j)
+			{ return l.distance(i, j) == 3; });
 		l.generate_bond_map("kekule", [&]
 			(lattice::pair_vector_t& list)
 		{
@@ -286,6 +279,56 @@ struct honeycomb
 					else
 						y = x + 2 * (L - 1);
 					list.push_back({x % N, y % N});
+				}
+		});
+		
+		l.generate_bond_map("nn_bond_1", [&]
+		(lattice::pair_vector_t& list)
+		{
+			int N = l.n_sites();
+
+			for (int i = 0; i < L; ++i)
+				for (int j = 0; j < L; ++j)
+				{
+					int x = 2 * i + 2 * L * j;
+					int y = x + 1;
+					list.push_back({y % N, x % N});
+				}
+		});
+		
+		l.generate_bond_map("nn_bond_2", [&]
+		(lattice::pair_vector_t& list)
+		{
+			int N = l.n_sites();
+
+			for (int i = 0; i < L; ++i)
+				for (int j = 0; j < L; ++j)
+				{
+					int x = 2 * i + 2 * L * j;
+					int y;
+					if (i == 0)
+						y = x + 4 * L - 1;
+					else
+						y = x + 2 * L - 1;
+					list.push_back({y % N, x % N});
+				}
+		});
+		
+		l.generate_bond_map("nn_bond_3", [&]
+		(lattice::pair_vector_t& list)
+		{
+			int N = l.n_sites();
+
+			for (int i = 0; i < L; ++i)
+				for (int j = 0; j < L; ++j)
+				{
+					int x = 2 * i + 2 * L * j;
+					int y;
+					if (i == 0)
+						y = x + 2 * L - 1;
+					else
+						y = x - 1;
+					list.push_back({y % N, x % N});
 				}
 		});
 	}

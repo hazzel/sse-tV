@@ -447,7 +447,7 @@ class fast_update
 			dmatrix_t b = propagator(n * param.n_delta, (n-1) * param.n_delta);
 			stabilizer.stabilize_backward(n, b);
 		}
-
+		
 		double measure_M2()
 		{
 			return measure_M2(equal_time_gf);
